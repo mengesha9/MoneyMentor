@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Desktop Progress Section Hiding Test</title>
+    <style>
+        /* Test styles to simulate the diagnostic progress section */
+        .diagnostic-progress-section {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 32px;
+            min-height: 120px;
+            opacity: 1;
+            visibility: visible;
+            background: #f0f0f0;
+            border: 2px solid #333;
+            padding: 20px;
+        }
+
+        .progress-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 400px;
+            gap: 24px;
+        }
+
+        .back-button-inline {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .back-button-modern {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+        }
+
+        .progress-circle-large {
+            width: 80px;
+            height: 80px;
+            background: #8B5CF6;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+        }
+
+        .progress-text-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+        }
+
+        .progress-number {
+            font-size: 26px;
+            font-weight: 800;
+        }
+
+        .progress-divider {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .progress-total {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .course-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 25px;
+            padding: 8px 16px;
+            backdrop-filter: blur(10px);
+            margin-left: 76px;
+        }
+
+        /* Hide progress section on desktop (screens wider than 768px) */
+        @media (min-width: 769px) {
+            .diagnostic-progress-section {
+                display: none !important;
+            }
+        }
+
+        /* Adjust course badge positioning on desktop since back button is hidden */
+        @media (min-width: 769px) {
+            .course-badge {
+                margin-left: 0;
+                justify-self: center;
+            }
+        }
+
+        /* Test container */
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+
+        .test-info {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .test-info h2 {
+            color: #1976d2;
+            margin-top: 0;
+        }
+
+        .viewport-info {
+            background: #fff3e0;
+            border: 1px solid #ff9800;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        .diagnostic-header-modern {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 24px;
+            color: white;
+            text-align: center;
+        }
+
+        .header-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0 0 8px 0;
+        }
+
+        .header-subtitle {
+            font-size: 14px;
+            margin: 0;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-info">
+            <h2>🧪 Desktop Progress Section Hiding Test</h2>
+            <p>This test verifies that the back icon and progress indicator (1/10) are hidden on desktop but remain visible on mobile.</p>
+            <p><strong>Expected behavior:</strong></p>
+            <ul>
+                <li><strong>Desktop (width > 768px):</strong> Progress section should be hidden</li>
+                <li><strong>Mobile (width ≤ 768px):</strong> Progress section should be visible</li>
+            </ul>
+        </div>
+
+        <div class="viewport-info">
+            <span id="viewport-size"></span>
+        </div>
+
+        <!-- Simulated Diagnostic Header -->
+        <div class="diagnostic-header-modern">
+            <h3 class="header-title">Diagnostic Assessment</h3>
+            <p class="header-subtitle">Let's personalize your learning journey</p>
+            
+            <div class="course-badge">
+                <span>📚</span>
+                <span>Money, Goals and Mindset</span>
+            </div>
+        </div>
+
+        <!-- Progress Section - This should be hidden on desktop -->
+        <div class="diagnostic-progress-section">
+            <div class="progress-container">
+                <!-- Back Button -->
+                <div class="back-button-inline">
+                    <button class="back-button-modern" title="Back to Course Selection">
+                        ←
+                    </button>
+                </div>
+                
+                <!-- Progress Indicator -->
+                <div class="progress-circle-large">
+                    <div class="progress-text-row">
+                        <span class="progress-number">1</span>
+                        <span class="progress-divider">/</span>
+                        <span class="progress-total">10</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Content -->
+        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; text-align: center;">
+            <h3>Test Question</h3>
+            <p>What is the first step in setting financial goals?</p>
+            <p><em>This content should be visible on both desktop and mobile.</em></p>
+        </div>
+    </div>
+
+    <script>
+        // Update viewport info
+        function updateViewportInfo() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            const isDesktop = width > 768;
+            
+            document.getElementById('viewport-size').innerHTML = 
+                `📱 Viewport: ${width} × ${height} | ${isDesktop ? '🖥️ Desktop' : '📱 Mobile'} | Progress section should be ${isDesktop ? 'hidden' : 'visible'}`;
+        }
+
+        // Update on load and resize
+        updateViewportInfo();
+        window.addEventListener('resize', updateViewportInfo);
+
+        // Add some interactive elements for testing
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🧪 Test page loaded');
+            console.log('📏 Viewport width:', window.innerWidth);
+            console.log('🎯 Progress section should be:', window.innerWidth > 768 ? 'hidden' : 'visible');
+        });
+    </script>
+</body>
+</html> 

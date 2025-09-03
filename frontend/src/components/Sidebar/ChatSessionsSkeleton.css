@@ -1,0 +1,101 @@
+.chat-sessions-skeleton {
+  padding: 8px 16px;
+}
+
+.chat-sessions-skeleton.collapsed {
+  padding: 8px 12px;
+}
+
+.session-group-skeleton {
+  margin-bottom: 24px;
+}
+
+.session-group-title-skeleton {
+  height: 12px;
+  width: 60px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  animation: shimmer 2s infinite linear;
+}
+
+.session-item-skeleton {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  margin-bottom: 4px;
+}
+
+.session-item-skeleton-collapsed {
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+  margin-bottom: 4px;
+}
+
+.session-icon-skeleton {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  animation: shimmer 2s infinite linear;
+}
+
+.session-content-skeleton {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.session-title-skeleton {
+  height: 16px;
+  width: 80%;
+  border-radius: 4px;
+  animation: shimmer 2s infinite linear;
+}
+
+.session-preview-skeleton {
+  height: 14px;
+  width: 90%;
+  border-radius: 4px;
+  animation: shimmer 2s infinite linear;
+}
+
+.session-meta-skeleton {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.session-timestamp-skeleton {
+  height: 12px;
+  width: 60px;
+  border-radius: 4px;
+  animation: shimmer 2s infinite linear;
+}
+
+.session-message-count-skeleton {
+  height: 12px;
+  width: 40px;
+  border-radius: 4px;
+  animation: shimmer 2s infinite linear;
+}
+
+.shimmer-light {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+}
+
+.shimmer-dark {
+  background: linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%);
+  background-size: 200% 100%;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+} 

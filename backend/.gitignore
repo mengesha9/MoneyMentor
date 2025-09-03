@@ -1,0 +1,128 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.env
+.venv
+env.bak/
+venv.bak/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+*.sublime-workspace
+*.sublime-project
+
+# Logs
+*.log
+logs/
+log/
+
+# Local development settings
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# OpenAI API keys and sensitive data
+*.pem
+*.key
+secrets.json
+credentials.json
+test_api.py
+
+# Database
+*.sqlite3
+*.db
+migrations/
+alembic/versions/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.dylib
+*.dll
+
+# Temporary files
+*.tmp
+*.temp
+.temp/
+tmp/
+
+# System Files
+.DS_Store
+Thumbs.db
+
+# Backend specific
+backend/.env
+backend/__pycache__/
+backend/*.pyc
+backend/*.pyo
+backend/*.pyd
+backend/.Python
+backend/build/
+backend/dist/
+backend/*.egg-info/
+backend/.coverage
+backend/htmlcov/
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.ruff_cache/
+backend/.hypothesis/
+backend/.tox/
+backend/.venv/
+backend/venv/
+backend/env/
+backend/ENV/
+backend/*.log
+backend/logs/
+backend/log/
+backend/tmp/
+backend/.temp/
+backend/*.tmp
+backend/*.temp
+backend/.DS_Store
+backend/Thumbs.db 
+
+Refined_Analogy_435508.json
+backend/Refined_Analogy_435508.json
+financial-education-463317-6241fc3d93b3.json

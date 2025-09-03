@@ -1,0 +1,23 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/backend:$COMMIT_SHA', '.']
+    dir: 'backend'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/backend:$COMMIT_SHA']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - backend
+      - --image=gcr.io/$PROJECT_ID/backend:$COMMIT_SHA
+      - --region=europe-west1
+      - --platform=managed
+      - --set-env-vars=ALLOWED_ORIGINS=https://frontend-new-647308514289.us-central1.run.app,http://localhost:5173,http://localhost:3000
+      - --allow-unauthenticated
+      - --port=8080
+
+images:
+  - 'gcr.io/$PROJECT_ID/backend:$COMMIT_SHA'
