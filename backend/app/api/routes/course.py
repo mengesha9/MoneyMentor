@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import Dict, Any
 import logging
 import json
+import asyncio
 from datetime import datetime
 
 from app.models.schemas import (
@@ -11,6 +12,7 @@ from app.models.schemas import (
     CourseCompleteRequest, CourseCompleteResponse
 )
 from app.services.course_service import CourseService
+from app.services.background_sync_service import background_sync_service
 from app.core.database import get_supabase
 
 router = APIRouter()
@@ -73,6 +75,17 @@ async def submit_course_quiz(
             selected_option=request.selected_option,
             correct=request.correct
         )
+        
+        # Trigger background sync to Google Sheets after successful quiz submission (non-blocking)
+        try:
+            # Use the existing background sync service asynchronously
+            asyncio.create_task(background_sync_service.force_sync_now())
+            logger.info(f"Background sync triggered for user {request.user_id} after course quiz submission")
+            
+        except Exception as e:
+            logger.warning(f"Failed to trigger background sync after course quiz submission: {e}")
+            # Don't fail the entire request if sync fails
+        
         return result
         
     except ValueError as e:
@@ -92,6 +105,17 @@ async def complete_course(
             user_id=request.user_id,
             course_id=request.course_id
         )
+        
+        # Trigger background sync to Google Sheets after course completion (non-blocking)
+        try:
+            # Use the existing background sync service asynchronously
+            asyncio.create_task(background_sync_service.force_sync_now())
+            logger.info(f"Background sync triggered for user {request.user_id} after course completion")
+            
+        except Exception as e:
+            logger.warning(f"Failed to trigger background sync after course completion: {e}")
+            # Don't fail the entire request if sync fails
+        
         return result
         
     except ValueError as e:

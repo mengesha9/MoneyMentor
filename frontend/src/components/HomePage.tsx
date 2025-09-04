@@ -89,36 +89,36 @@ export const HomePage: React.FC<HomePageProps> = ({ onGetStarted }) => {
     }
   ];
 
-  const pricingPlans = [
-    {
-      name: 'Free',
-      price: '$0',
-      period: '/month',
-      features: [
-        'Basic AI chat (5 messages/day)',
-        'Access to 3 courses',
-        'Basic quizzes',
-        'Community support'
-      ],
-      popular: false,
-      gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-    },
-    {
-      name: 'Pro',
-      price: '$9.99',
-      period: '/month',
-      features: [
-        'Unlimited AI chat',
-        'All courses & content',
-        'Advanced analytics',
-        'Priority support',
-        'Personalized roadmap',
-        'Progress tracking'
-      ],
-      popular: true,
-      gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-    }
-  ];
+  // const pricingPlans = [
+  //   {
+  //     name: 'Free',
+  //     price: '$0',
+  //     period: '/month',
+  //     features: [
+  //       'Basic AI chat (5 messages/day)',
+  //       'Access to 3 courses',
+  //       'Basic quizzes',
+  //       'Community support'
+  //     ],
+  //     popular: false,
+  //     gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+  //   },
+  //   {
+  //     name: 'Pro',
+  //     price: '$9.99',
+  //     period: '/month',
+  //     features: [
+  //       'Unlimited AI chat',
+  //       'All courses & content',
+  //       'Advanced analytics',
+  //       'Priority support',
+  //       'Personalized roadmap',
+  //       'Progress tracking'
+  //     ],
+  //     popular: true,
+  //     gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+  //   }
+  // ];
 
   const testimonials = [
     {
@@ -470,112 +470,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onGetStarted }) => {
         </Container>
       </Box>
 
-      {/* Pricing Section */}
-      <Box id="pricing" sx={{ py: { xs: 8, md: 12 } }}>
-        <Container maxWidth="lg">
-          <Box sx={{ textAlign: 'center', mb: 8 }}>
-            <Typography
-              variant="h3"
-              component="h2"
-              sx={{
-                fontWeight: 700,
-                mb: 2,
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent'
-              }}
-            >
-              Choose Your Plan
-            </Typography>
-            <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto' }}>
-              Start free and upgrade when you're ready to unlock advanced features
-            </Typography>
-          </Box>
-
-          <Grid container spacing={4} justifyContent="center">
-            {pricingPlans.map((plan, index) => (
-              <Grid item xs={12} sm={6} md={4} key={index}>
-                <Card
-                  sx={{
-                    position: 'relative',
-                    width: '100%',
-                    height: '650px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    p: 4,
-                    textAlign: 'center',
-                    transition: 'all 0.3s ease',
-                    transform: plan.popular ? 'scale(1.05)' : 'scale(1)',
-                    '&:hover': {
-                      transform: plan.popular ? 'scale(1.08)' : 'scale(1.03)',
-                      boxShadow: '0 12px 40px rgba(0,0,0,0.15)'
-                    }
-                  }}
-                >
-                  {plan.popular && (
-                    <Chip
-                      label="Most Popular"
-                      sx={{
-                        position: 'absolute',
-                        top: 4,
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        color: 'white',
-                        fontWeight: 600,
-                        zIndex: 1
-                      }}
-                    />
-                  )}
-
-                  <Box sx={{ flex: '1', display: 'flex', flexDirection: 'column' }}>
-                    <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-                      {plan.name}
-                    </Typography>
-                    <Box sx={{ mb: 3 }}>
-                      <Typography variant="h3" component="span" sx={{ fontWeight: 700 }}>
-                        {plan.price}
-                      </Typography>
-                      <Typography variant="body1" component="span" color="text.secondary">
-                        {plan.period}
-                      </Typography>
-                    </Box>
-                    <List sx={{ textAlign: 'left', mb: 3, flex: '1' }}>
-                      {plan.features.map((feature, featureIndex) => (
-                        <ListItem key={featureIndex} sx={{ px: 0 }}>
-                          <ListItemIcon sx={{ minWidth: 30 }}>
-                            <CheckIcon sx={{ color: '#667eea' }} />
-                          </ListItemIcon>
-                          <ListItemText primary={feature} />
-                        </ListItem>
-                      ))}
-                    </List>
-                  </Box>
-                  <Button
-                    variant="contained"
-                    fullWidth
-                    size="large"
-                    onClick={onGetStarted}
-                    sx={{
-                      background: plan.gradient,
-                      py: 1.5,
-                      fontSize: '1.1rem',
-                      fontWeight: 600,
-                      '&:hover': {
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 8px 25px rgba(0,0,0,0.15)'
-                      }
-                    }}
-                  >
-                    {plan.name === 'Free' ? 'Get Started' : 'Start Free Trial'}
-                  </Button>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        </Container>
-      </Box>
+    
 
       {/* Testimonials Section */}
       <Box id="testimonials" sx={{ py: { xs: 8, md: 12 }, bgcolor: 'white' }}>

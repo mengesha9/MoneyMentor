@@ -123,9 +123,9 @@ export const LearningCenter: React.FC<LearningCenterProps> = ({
   const renderHeader = () => {
     return (
       <div className="learning-center-header">
-        <div className="header-content">
+        {/* <div className="header-content">
           <h2>📚 Learning Center</h2>
-        </div>
+        </div> */}
       </div>
     );
   };

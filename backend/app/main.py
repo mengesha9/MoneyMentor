@@ -168,69 +168,8 @@ app.include_router(session.router, prefix="/api/session", tags=["session"])
 app.include_router(sync.router, prefix="/api/sync", tags=["sync"])
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 
-# @app.on_event("startup")
-# async def startup_event():
-#     """Startup event - initialize background services"""
-#     print("🚀 Starting MoneyMentor API...")
-#     print("✅ API ready - background services will start in background")
-    
-#     # Start background services with very low priority
-#     async def start_services_low_priority():
-#         try:
-#             # Wait a bit to ensure API is fully ready
-#             await asyncio.sleep(2)
-#             print("⏰ Starting background services...")
-            
-#             # Start background sync service for Google Sheets
-#             try:
-#                 await background_sync_service.start_background_sync()
-#                 print("✅ Background sync service started")
-#             except Exception as e:
-#                 print(f"❌ Failed to start background sync service: {e}")
-            
-#             # Start session cleanup service
-#             try:
-#                 await session_cleanup_service.start_cleanup_service()
-#                 print("✅ Session cleanup service started")
-#             except Exception as e:
-#                 print(f"❌ Failed to start session cleanup service: {e}")
-                
-#         except Exception as e:
-#             print(f"❌ Error starting background services: {e}")
-    
-#     # Start services with very low priority - don't await
-#     asyncio.create_task(start_services_low_priority())
-
-# @app.on_event("shutdown")
-# async def shutdown_event():
-#     """Shutdown event - cleanup background services"""
-#     print("🛑 Shutting down MoneyMentor API...")
-    
-#     # Stop background services with timeout to avoid hanging
-#     async def stop_services():
-#         # Stop background sync service
-#         try:
-#             await asyncio.wait_for(background_sync_service.stop_background_sync(), timeout=5.0)
-#             print("✅ Background sync service stopped")
-#         except asyncio.TimeoutError:
-#             print("⚠️ Background sync service stop timed out")
-#         except Exception as e:
-#             print(f"❌ Error stopping background sync service: {e}")
-        
-#         # Stop session cleanup service
-#         try:
-#             await asyncio.wait_for(session_cleanup_service.stop_cleanup_service(), timeout=5.0)
-#             print("✅ Session cleanup service stopped")
-#         except asyncio.TimeoutError:
-#             print("⚠️ Session cleanup service stop timed out")
-#         except Exception as e:
-#             print(f"❌ Error stopping session cleanup service: {e}")
-    
-#     # Stop services with timeout
-#     try:
-#         await asyncio.wait_for(stop_services(), timeout=10.0)
-#     except asyncio.TimeoutError:
-#         print("⚠️ Service shutdown timed out - forcing exit")
+# Background services are now triggered on-demand after quiz submissions
+# This prevents API blocking and ensures Google Sheets sync happens when needed
 
 @app.get("/")
 async def root():

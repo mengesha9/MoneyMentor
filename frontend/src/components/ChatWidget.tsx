@@ -1346,7 +1346,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
               title: page.title,
               content: page.content,
               pageNumber: index + 1,
-              totalPages: result.ai_generated_course.total_pages,
+              totalPages: result.ai_generated_course.pages.length, // Use actual number of pages generated
               pageType: 'content'
             })),
             quizQuestions: []
@@ -1436,7 +1436,9 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
         setLearnCurrentCoursePage(learnCurrentCourse.pages[pageIndex]);
         console.log(`📖 Navigated to AI course page ${pageIndex + 1}:`, learnCurrentCourse.pages[pageIndex]);
       } else {
-        console.warn(`⚠️ Invalid page index for AI course: ${pageIndex}`);
+        console.warn(`⚠️ Invalid page index for AI course: ${pageIndex}. Course has ${learnCurrentCourse.pages.length} pages (indices 0-${learnCurrentCourse.pages.length - 1})`);
+        // Don't navigate if the page doesn't exist
+        return;
       }
     } else {
       // For regular courses, use the existing navigation logic

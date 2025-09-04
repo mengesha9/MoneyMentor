@@ -1,3 +1,5 @@
+import asyncio
+from app.services.background_sync_service import background_sync_service
 from fastapi import APIRouter, HTTPException, Depends, Request
 from typing import Dict, Any, List
 import logging
@@ -189,26 +191,10 @@ async def submit_quiz(
         except Exception as e:
             print(f"📝 Raw Request Body: Could not read - {e}")
         
-        print(f"📋 Quiz Batch Type: {quiz_batch.quiz_type}")
-        print(f"👤 User ID from token: {current_user['id']}")
-        print(f"👤 User ID from request: {quiz_batch.user_id}")
-        print(f"🆔 Session ID: {quiz_batch.session_id}")
-        print(f"📊 Number of Responses: {len(quiz_batch.responses)}")
-        
-        # Print the raw quiz_batch object
-        print(f"\n🔍 RAW QUIZ_BATCH OBJECT:")
-        print(f"  Type: {type(quiz_batch)}")
-        print(f"  Dict: {quiz_batch.dict()}")
-        
+     
         print("\n📝 Individual Quiz Responses:")
         for i, response in enumerate(quiz_batch.responses):
-            print(f"  Response {i+1}:")
-            print(f"    Type: {type(response)}")
-            print(f"    Raw: {response}")
-            print(f"    Quiz ID: {response.get('quiz_id', 'N/A')}")
-            print(f"    Topic: {response.get('topic', 'N/A')}")
-            print(f"    Selected Option: {response.get('selected_option', 'N/A')}")
-            print(f"    Correct: {response.get('correct', 'N/A')}")
+           
             # Check for any extra fields that might cause validation issues
             extra_fields = {k: v for k, v in response.items() if k not in ['quiz_id', 'topic', 'selected_option', 'correct']}
             if extra_fields:
@@ -347,15 +333,7 @@ async def submit_quiz(
             try:
                 logger.info("Creating course recommendation")
                 
-                # 🔍 DEBUG: Print course generation analysis
-                print("=" * 80)
-                print("COURSE GENERATION ANALYSIS")
-                print("=" * 80)
-                print(f"📊 Overall Score: {overall_score}%")
-                print(f"📚 Quiz Type: {quiz_batch.quiz_type}")
-                print(f"Number of Responses: {len(quiz_batch.responses)}")
-                print(f"✅ Correct Responses: {correct_responses}")
-                print(f"❌ Incorrect Responses: {total_responses - correct_responses}")
+            
                 
                 # Check if user selected a specific course type
                 selected_course_type = quiz_batch.selected_course_type
@@ -417,11 +395,7 @@ async def submit_quiz(
                     else:
                         focus_topic = "General Finance"
                         print(f"No responses available, using default: {focus_topic}")
-                
-                print(f"\n🎓 Course Level Determination:")
-                print(f"  📊 Score {overall_score}% → {course_level} Level")
-                print(f"  Focus Topic: {focus_topic}")
-                print("=" * 80)
+           
                 
                 # Generate course using AI service
                 print("🤖 Starting AI course generation...")
@@ -432,13 +406,7 @@ async def submit_quiz(
                     overall_score=overall_score,
                     user_id=current_user['id']
                 )
-                
-                print("✅ AI course generation completed!")
-                print(f"📖 Generated Title: {ai_generated_course.title}")
-                print(f"📄 Number of Pages: {len(ai_generated_course.pages)}")
-                print(f"📝 First Page Sample: {ai_generated_course.pages[0] if ai_generated_course.pages else 'No pages'}")
-                print("=" * 80)
-                
+            
                 # Convert AI course to course data format for database storage
                 course_data = {
                     "title": ai_generated_course.title,
@@ -504,39 +472,13 @@ async def submit_quiz(
                     "page_structure": "ai_generated",
                     "target_audience": f"{course_level.lower()} level learners",
                     "learning_style": "personalized_and_adaptive",
-                    "estimated_pages": 10,
+                    "estimated_pages": len(ai_generated_course.pages),
                     "page_focus": "ai_optimized",
-                    "total_pages": 10
+                    "total_pages": len(ai_generated_course.pages)
                 }
                 
                 # 🔍 DEBUG: Print generated course data
-                print("=" * 80)
-                print("📚 GENERATED COURSE DATA")
-                print("=" * 80)
-                print(f"📖 Title: {course_data['title']}")
-                print(f"📚 Module: {course_data['module']}")
-                print(f"Track: {course_data['track']}")
-                print(f"📏 Length: {course_data['estimated_length']}")
-                print(f"🎓 Level: {course_data['course_level']}")
-                print(f"💡 Topic: {course_data['topic']}")
-                print(f"🔍 Why Recommended: {course_data['why_recommended']}")
-                if selected_course_type:
-                    print(f"Original Course Selection: {selected_course_type}")
-                print(f"📝 Learning Objectives: {len(course_data['learning_objectives'])} objectives")
-                print(f"🧠 Core Concepts: {len(course_data['core_concepts'])} concepts")
-                print(f"🔑 Key Terms: {len(course_data['key_terms'])} terms")
-                print(f"📖 Real-Life Scenarios: {len(course_data['real_life_scenarios'])} scenarios")
-                print(f"⚠️ Mistakes to Avoid: {len(course_data['mistakes_to_avoid'])} items")
-                print(f"🚀 Action Steps: {len(course_data['action_steps'])} steps")
-                print(f"❓ Sample Quiz Questions: {len(course_data['sample_quiz'])} questions")
-                print("=" * 80)
-                
-                # Register the course
-                print("=" * 80)
-                print("🚀 COURSE REGISTRATION PROCESS")
-                print("=" * 80)
-                print("📝 Attempting to register course...")
-                
+               
                 # Add AI-generated pages to course_data for page generation (not for database storage)
                 course_data_with_pages = course_data.copy()
                 course_data_with_pages["ai_generated_pages"] = ai_generated_course.pages
@@ -573,19 +515,14 @@ async def submit_quiz(
                     "course_id": recommended_course_id,
                     "title": ai_generated_course.title,
                     "pages": ai_generated_course.pages,
-                    "total_pages": 10,
+                    "total_pages": len(ai_generated_course.pages),  # Use actual number of pages generated
                     "course_level": course_level.lower(),
                     "focus_topic": focus_topic
                 }
                 
             except Exception as course_error:
                 logger.error(f"Failed to create course: {course_error}")
-                print("=" * 80)
-                print("❌ COURSE CREATION FAILED")
-                print("=" * 80)
-                print(f"🚨 Error: {course_error}")
-                print("=" * 80)
-                
+              
                 # Try to create a minimal test course to see if database is working
                 try:
                     logger.info("Attempting to create minimal test course")
@@ -686,21 +623,7 @@ async def submit_quiz(
             "ai_generated_course": ai_course_data if 'ai_course_data' in locals() else None
         }
         
-        # 🔍 DEBUG: Print final response data
-        print("=" * 80)
-        print("📤 FINAL RESPONSE DATA")
-        print("=" * 80)
-        print(f"✅ Success: True")
-        print(f"💬 Message: Quiz submission(s) successful: {correct_responses}/{total_responses} correct")
-        print(f"👤 User ID: {response_data['user_id']}")
-        print(f"📚 Quiz Type: {response_data['quiz_type']}")
-        print(f"📝 Total Responses: {response_data['total_responses']}")
-        print(f"✅ Correct Responses: {response_data['correct_responses']}")
-        print(f"📊 Overall Score: {response_data['overall_score']}%")
-        print(f"Topic Breakdown: {response_data['topic_breakdown']}")
-        print(f"📊 Google Sheets Logged: {response_data['google_sheets_logged']}")
-        print(f"🔗 Google Sheets URL: {response_data['google_sheets_url']}")
-        print(f"📚 Recommended Course ID: {response_data['recommended_course_id']}")
+      
         
         # Log AI-generated course data if available
         if 'ai_generated_course' in response_data and response_data['ai_generated_course']:
@@ -709,6 +632,16 @@ async def submit_quiz(
             print("🤖 AI Generated Course: None")
         
         print("=" * 80)
+        
+        # 7. Trigger background sync to Google Sheets after successful quiz submission (non-blocking)
+        try:
+            # Use the existing background sync service asynchronously
+            asyncio.create_task(background_sync_service.force_sync_now())
+            logger.info(f"Background sync triggered for user {current_user['id']} after quiz submission")
+            
+        except Exception as e:
+            logger.warning(f"Failed to trigger background sync after quiz submission: {e}")
+            # Don't fail the entire request if sync fails
         
         return {
             "success": True,
@@ -720,12 +653,7 @@ async def submit_quiz(
         logger.error(f"Failed to submit quiz responses: {e}")
         
         # 🔍 ENHANCED ERROR REPORTING
-        print("=" * 80)
-        print("❌ QUIZ SUBMISSION ERROR DETAILS")
-        print("=" * 80)
-        print(f"🚨 Error Type: {type(e).__name__}")
-        print(f"🚨 Error Message: {str(e)}")
-        
+     
         # If it's a validation error, show the expected format
         if "validation error" in str(e).lower() or "422" in str(e):
             print("\n📋 EXPECTED REQUEST FORMAT:")
@@ -744,17 +672,7 @@ async def submit_quiz(
     ]
 }
             """)
-            
-            print("🔍 VALIDATION RULES:")
-            print("  • user_id: Must be a valid UUID string")
-            print("  • quiz_type: Must be exactly 'diagnostic' or 'micro'")
-            print("  • session_id: Must be a valid UUID string")
-            print("  • responses: Must be an array of response objects")
-            print("  • selected_option: Must be exactly 'A', 'B', 'C', or 'D'")
-            print("  • correct: Must be true or false (boolean)")
-            print("  • topic: Must be a non-empty string")
         
-        print("=" * 80)
         
         # Return a more helpful error response
         if "validation error" in str(e).lower() or "422" in str(e):

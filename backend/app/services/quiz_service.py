@@ -45,6 +45,66 @@ class QuizService:
             "Smart Spending Habits"
         ]
     
+    def _parse_llm_json_response(self, response_content: str) -> Any:
+        """
+        Robust JSON parsing that handles both clean JSON and markdown-wrapped JSON responses.
+        
+        Args:
+            response_content: Raw response content from LLM
+            
+        Returns:
+            Parsed JSON data
+            
+        Raises:
+            ValueError: If JSON cannot be parsed after all attempts
+        """
+        import re
+        
+        content = response_content.strip()
+        
+        # First, try to extract JSON from markdown code blocks
+        markdown_patterns = [
+            r'```json\s*\n(.*?)\n```',  # ```json ... ```
+            r'```\s*\n(.*?)\n```',      # ``` ... ``` (generic code block)
+            r'`([^`]+)`',                # `...` (inline code)
+        ]
+        
+        for pattern in markdown_patterns:
+            match = re.search(pattern, content, re.DOTALL)
+            if match:
+                content = match.group(1).strip()
+                break
+        
+        # Clean up common JSON issues
+        try:
+            # Remove trailing commas before closing braces and brackets
+            content = re.sub(r',(\s*[}\]])', r'\1', content)
+            
+            # Try to parse the cleaned JSON
+            return json.loads(content)
+            
+        except json.JSONDecodeError as e:
+            logger.warning(f"First JSON parse attempt failed: {e}")
+            
+            # Try more aggressive cleaning
+            try:
+                # Remove all trailing commas
+                content = re.sub(r',(\s*[}\]])', r'\1', content)
+                content = re.sub(r',(\s*})', r'\1', content)
+                content = re.sub(r',(\s*\])', r'\1', content)
+                
+                # Remove any remaining markdown artifacts
+                content = re.sub(r'^```.*?\n', '', content, flags=re.MULTILINE)
+                content = re.sub(r'\n```.*?$', '', content, flags=re.MULTILINE)
+                
+                return json.loads(content)
+                
+            except json.JSONDecodeError as e2:
+                logger.error(f"Failed to parse LLM response as JSON after cleaning: {e2}")
+                logger.error(f"Original response: {response_content}")
+                logger.error(f"Cleaned content: {content}")
+                raise ValueError("LLM did not return valid JSON.")
+    
     async def should_trigger_diagnostic(self, user_id: str) -> bool:
         """Check if diagnostic pre-test should be triggered"""
         try:
@@ -126,29 +186,9 @@ class QuizService:
                     )
             
             response = self.llm.invoke([HumanMessage(content=prompt)])
-            import json
-            import re
-            try:
-                # Clean up the response to handle trailing commas and other JSON issues
-                content = response.content.strip()
-                
-                # Remove trailing commas before closing braces and brackets
-                content = re.sub(r',(\s*[}\]])', r'\1', content)
-                
-                # Try to parse the cleaned JSON
-                questions = json.loads(content)
-            except Exception as e:
-                logger.error(f"Failed to parse LLM response as JSON: {e}, response: {response.content}")
-                # Try one more time with more aggressive cleaning
-                try:
-                    # Remove all trailing commas
-                    content = re.sub(r',(\s*[}\]])', r'\1', content)
-                    content = re.sub(r',(\s*})', r'\1', content)
-                    content = re.sub(r',(\s*\])', r'\1', content)
-                    questions = json.loads(content)
-                except Exception as e2:
-                    logger.error(f"Failed to parse LLM response even after cleaning: {e2}")
-                    raise ValueError("LLM did not return valid JSON.")
+            
+            # Use the robust JSON parsing method
+            questions = self._parse_llm_json_response(response.content)
             
             # Process all questions
             processed_questions = []
@@ -181,30 +221,11 @@ class QuizService:
                 f"AVOID complex adult topics like retirement planning, tax deductions, or 529 plans."
             )
             response = self.llm.invoke([HumanMessage(content=prompt)])
-            import json
-            import re
-            try:
-                # Clean up the response to handle trailing commas and other JSON issues
-                content = response.content.strip()
-                
-                # Remove trailing commas before closing braces and brackets
-                content = re.sub(r',(\s*[}\]])', r'\1', content)
-                
-                # Try to parse the cleaned JSON
-                question_data = json.loads(content)
-            except Exception as e:
-                logger.error(f"Failed to parse question JSON for topic {topic}: {e}, response: {response.content}")
-                # Try one more time with more aggressive cleaning
-                try:
-                    # Remove all trailing commas
-                    content = re.sub(r',(\s*[}\]])', r'\1', content)
-                    content = re.sub(r',(\s*})', r'\1', content)
-                    content = re.sub(r',(\s*\])', r'\1', content)
-                    question_data = json.loads(content)
-                except Exception as e2:
-                    logger.error(f"Failed to parse question JSON even after cleaning: {e2}")
-                    return None
-                if 'question' in question_data and 'choices' in question_data and 'correct_answer' in question_data:
+            
+            # Use the robust JSON parsing method
+            question_data = self._parse_llm_json_response(response.content)
+            
+            if 'question' in question_data and 'choices' in question_data and 'correct_answer' in question_data:
                     return {
                         'question': question_data['question'],
                         'choices': question_data['choices'],
@@ -523,12 +544,9 @@ class QuizService:
                 f"Return a JSON array of questions. Each question should have: 'question' (text), 'choices' (an object with keys 'a', 'b', 'c', 'd' and string values), 'correct_answer' (one of 'a', 'b', 'c', 'd'), 'explanation' (short explanation for the correct answer), and 'difficulty' (one of 'easy', 'medium', 'hard'). Example format: [{{'question': '...', 'choices': {{'a': '...', 'b': '...', 'c': '...', 'd': '...'}}, 'correct_answer': 'a', 'explanation': '...', 'difficulty': 'medium'}}]"
             )
             response = self.llm.invoke([HumanMessage(content=prompt)])
-            import json
-            try:
-                questions = json.loads(response.content)
-            except Exception as e:
-                logger.error(f"Failed to parse LLM response as JSON: {e}, response: {response.content}")
-                raise ValueError("LLM did not return valid JSON.")
+            
+            # Use the robust JSON parsing method
+            questions = self._parse_llm_json_response(response.content)
 
             # Post-process to ensure structure and add topic information only for diagnostic quizzes
             processed_questions = []

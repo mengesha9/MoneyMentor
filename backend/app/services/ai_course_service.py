@@ -85,8 +85,10 @@ class AICourseService:
                 )
                 
                 # Validate page count and content length
-                if len(course.pages) != 10:
-                    logger.warning(f"Expected 10 pages, got {len(course.pages)}")
+                if len(course.pages) < 5:
+                    logger.warning(f"Course has very few pages: {len(course.pages)}. Expected at least 5 pages.")
+                elif len(course.pages) != 10:
+                    logger.info(f"Generated {len(course.pages)} pages (expected 10, but this is acceptable)")
                 
                 for i, page in enumerate(course.pages):
                     if len(page.get('content', '')) > 500:
@@ -204,7 +206,7 @@ Generate a 10-page course on "{focus_topic}" at the {course_level} level, based 
 - Page 10: Action steps and next steps (immediate actions teens can take)
 
 **✅ Content Requirements:**
-1. Create exactly 10 pages
+1. Create 8-10 pages (aim for 10, but 8+ is acceptable)
 2. Each page must have a title and content
 3. Each page's content must be 500 characters or less
 4. Use engaging, conversational tone appropriate for teens
@@ -221,7 +223,7 @@ Return a JSON object with this exact structure:
     "pages": [
         {{"title": "Page Title", "content": "Page content (max 500 chars)..."}},
         {{"title": "Page Title", "content": "Page content (max 500 chars)..."}},
-        ... (exactly 10 pages)
+        ... (8-10 pages)
     ]
 }}
 
