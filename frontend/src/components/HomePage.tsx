@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   Box, 
   Container, 
@@ -16,7 +16,8 @@ import {
   ListItemText,
   Divider,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  IconButton
 } from '@mui/material';
 import {
   Chat as ChatIcon,
@@ -29,7 +30,9 @@ import {
   PlayArrow as PlayIcon,
   TrendingUp as TrendingIcon,
   Security as SecurityIcon,
-  Support as SupportIcon
+  Support as SupportIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon
 } from '@mui/icons-material';
 
 interface HomePageProps {
@@ -39,7 +42,10 @@ interface HomePageProps {
 export const HomePage: React.FC<HomePageProps> = ({ onGetStarted }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isLargeScreen = useMediaQuery(theme.breakpoints.up('lg'));
   const [activeTestimonial, setActiveTestimonial] = useState(0);
+  const [currentCourseIndex, setCurrentCourseIndex] = useState(0);
+  const coursesScrollRef = useRef<HTMLDivElement>(null);
 
   const features = [
     {
@@ -68,7 +74,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onGetStarted }) => {
     }
   ];
 
-  const howItWorks = [
+  const learningProcess = [
     {
       step: '01',
       title: 'Sign Up',
@@ -86,39 +92,39 @@ export const HomePage: React.FC<HomePageProps> = ({ onGetStarted }) => {
       title: 'Start Learning',
       description: 'Access personalized courses, chat with AI, and track your progress.',
       icon: <SchoolIcon />
+
+     
     }
   ];
 
-  // const pricingPlans = [
-  //   {
-  //     name: 'Free',
-  //     price: '$0',
-  //     period: '/month',
-  //     features: [
-  //       'Basic AI chat (5 messages/day)',
-  //       'Access to 3 courses',
-  //       'Basic quizzes',
-  //       'Community support'
-  //     ],
-  //     popular: false,
-  //     gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-  //   },
-  //   {
-  //     name: 'Pro',
-  //     price: '$9.99',
-  //     period: '/month',
-  //     features: [
-  //       'Unlimited AI chat',
-  //       'All courses & content',
-  //       'Advanced analytics',
-  //       'Priority support',
-  //       'Personalized roadmap',
-  //       'Progress tracking'
-  //     ],
-  //     popular: true,
-  //     gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-  //   }
-  // ];
+  const courses = [
+    {
+      emoji: '🎯',
+      title: 'Money, Goals and Mindset',
+      description: 'Learn to set smart financial goals and develop a positive money mindset for your future',
+      color: '#667eea'
+    },
+    {
+      emoji: '💰',
+      title: 'Budgeting and Saving',
+      description: 'Master budgeting basics and build healthy saving habits for financial success',
+      color: '#764ba2'
+    },
+    {
+      emoji: '🎓',
+      title: 'College Planning and Saving',
+      description: 'Plan for college costs, find scholarships, and learn about student loans',
+      color: '#f093fb'
+    },
+    {
+      emoji: '💼',
+      title: 'Earning and Income Basics',
+      description: 'Understand paychecks, first jobs, and smart money habits when you start earning',
+      color: '#4facfe'
+    }
+  ];
+
+
 
   const testimonials = [
     {
@@ -151,6 +157,43 @@ export const HomePage: React.FC<HomePageProps> = ({ onGetStarted }) => {
         behavior: 'smooth',
         block: 'start'
       });
+    }
+  };
+
+  const scrollCourses = (direction: 'left' | 'right') => {
+    if (!coursesScrollRef.current) return;
+    
+    const container = coursesScrollRef.current;
+    const cardWidth = container.children[0]?.clientWidth || 0;
+    const gap = 24; // 24px gap between cards
+    const scrollAmount = cardWidth + gap;
+    
+    if (direction === 'left') {
+      container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+      setCurrentCourseIndex(Math.max(0, currentCourseIndex - 1));
+    } else {
+      container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+      setCurrentCourseIndex(Math.min(courses.length - 3, currentCourseIndex + 1));
+    }
+  };
+
+  const handleWheelScroll = (e: React.WheelEvent) => {
+    if (!coursesScrollRef.current) return;
+    
+    e.preventDefault();
+    const container = coursesScrollRef.current;
+    const cardWidth = container.children[0]?.clientWidth || 0;
+    const gap = 24;
+    const scrollAmount = cardWidth + gap;
+    
+    if (e.deltaY > 0) {
+      // Scroll right
+      container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+      setCurrentCourseIndex(Math.min(courses.length - 3, currentCourseIndex + 1));
+    } else {
+      // Scroll left
+      container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+      setCurrentCourseIndex(Math.max(0, currentCourseIndex - 1));
     }
   };
 
@@ -330,8 +373,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onGetStarted }) => {
         </Container>
       </Box>
 
-      {/* How It Works Section */}
-      <Box id="how-it-works" sx={{ py: { xs: 8, md: 12 }, bgcolor: 'white' }}>
+      {/* Learning Process Section */}
+      <Box id="learning-process" sx={{ py: { xs: 8, md: 12 }, bgcolor: 'white' }}>
         <Container maxWidth="lg">
           <Box sx={{ textAlign: 'center', mb: 8 }}>
             <Typography
@@ -346,10 +389,10 @@ export const HomePage: React.FC<HomePageProps> = ({ onGetStarted }) => {
                 WebkitTextFillColor: 'transparent'
               }}
             >
-              How It Works
+              Learning Process
             </Typography>
             <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto' }}>
-              Get started in minutes with our simple 3-step process
+              Start your personalized financial learning journey in 3 simple steps
             </Typography>
           </Box>
 
@@ -361,7 +404,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onGetStarted }) => {
             flexWrap: 'wrap',
             position: 'relative'
           }}>
-            {howItWorks.map((step, index) => (
+            {learningProcess.map((step, index) => (
                               <Box 
                 key={index} 
                 sx={{ 
@@ -374,7 +417,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onGetStarted }) => {
                 }}
               >
                 {/* Connecting line (except for last item) */}
-                {index < howItWorks.length - 1 && (
+                {index < learningProcess.length - 1 && (
                   <Box
                     sx={{
                       position: 'absolute',
@@ -470,7 +513,281 @@ export const HomePage: React.FC<HomePageProps> = ({ onGetStarted }) => {
         </Container>
       </Box>
 
-    
+      {/* Courses Section */}
+      <Box id="courses" sx={{ py: { xs: 8, md: 12 }, bgcolor: '#f8fafc' }}>
+        <Container maxWidth="lg">
+          <Box sx={{ textAlign: 'center', mb: 8 }}>
+            <Typography
+              variant="h3"
+              component="h2"
+              sx={{
+                fontWeight: 700,
+                mb: 2,
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
+              }}
+            >
+              Our Courses
+            </Typography>
+            <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto' }}>
+              Explore our comprehensive financial education courses designed specifically for Students
+            </Typography>
+          </Box>
+
+          {/* Desktop: Horizontal layout with conditional arrows */}
+          {isLargeScreen ? (
+            <Box sx={{ position: 'relative' }}>
+              {/* Left Arrow - Only show if there are more cards than can fit */}
+              {courses.length > 4 && (
+                <IconButton
+                  onClick={() => scrollCourses('left')}
+                  disabled={currentCourseIndex === 0}
+                  sx={{
+                    position: 'absolute',
+                    left: -20,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    zIndex: 2,
+                    bgcolor: 'white',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                    '&:hover': {
+                      bgcolor: 'grey.50',
+                      transform: 'translateY(-50%) scale(1.1)'
+                    },
+                    '&:disabled': {
+                      opacity: 0.3
+                    }
+                  }}
+                >
+                  <ChevronLeftIcon />
+                </IconButton>
+              )}
+
+              {/* Right Arrow - Only show if there are more cards than can fit */}
+              {courses.length > 4 && (
+                <IconButton
+                  onClick={() => scrollCourses('right')}
+                  disabled={currentCourseIndex >= courses.length - 3}
+                  sx={{
+                    position: 'absolute',
+                    right: -20,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    zIndex: 2,
+                    bgcolor: 'white',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                    '&:hover': {
+                      bgcolor: 'grey.50',
+                      transform: 'translateY(-50%) scale(1.1)'
+                    },
+                    '&:disabled': {
+                      opacity: 0.3
+                    }
+                  }}
+                >
+                  <ChevronRightIcon />
+                </IconButton>
+              )}
+
+              {/* Container - Show all cards if 4 or fewer, otherwise scrollable */}
+              <Box
+                ref={coursesScrollRef}
+                onWheel={courses.length > 4 ? handleWheelScroll : undefined}
+                sx={{
+                  display: 'flex',
+                  gap: 3,
+                  overflowX: courses.length > 4 ? 'hidden' : 'visible',
+                  scrollBehavior: 'smooth',
+                  justifyContent: courses.length <= 4 ? 'center' : 'flex-start',
+                  '&::-webkit-scrollbar': {
+                    display: 'none'
+                  },
+                  scrollbarWidth: 'none'
+                }}
+              >
+                {courses.map((course, index) => (
+                  <Card
+                    key={index}
+                    sx={{
+                      width: '260px',
+                      height: '240px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      borderRadius: 2,
+                      background: 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(248,250,252,0.9) 100%)',
+                      border: '1px solid rgba(102, 126, 234, 0.1)',
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                      transition: 'all 0.3s ease',
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                      '&:hover': {
+                        transform: 'translateY(-6px)',
+                        boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
+                        border: `1px solid ${course.color}20`,
+                        '& .course-arrow': {
+                          transform: 'translateX(4px)',
+                          color: course.color
+                        }
+                      }
+                    }}
+                  >
+                    <CardContent sx={{ p: 2, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                      <Box sx={{ textAlign: 'center', mb: 1.5 }}>
+                        <Typography
+                          variant="h2"
+                          sx={{
+                            fontSize: '2rem',
+                            mb: 1,
+                            display: 'block'
+                          }}
+                        >
+                          {course.emoji}
+                        </Typography>
+                        <Typography
+                          variant="h6"
+                          component="h3"
+                          sx={{
+                            fontWeight: 700,
+                            mb: 1,
+                            color: course.color,
+                            fontSize: '1rem'
+                          }}
+                        >
+                          {course.title}
+                        </Typography>
+                      </Box>
+                      
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{
+                          lineHeight: 1.4,
+                          fontSize: '0.85rem',
+                          flexGrow: 1,
+                          mb: 1.5,
+                          wordWrap: 'break-word',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 3,
+                          WebkitBoxOrient: 'vertical'
+                        }}
+                      >
+                        {course.description}
+                      </Typography>
+
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: course.color,
+                          fontWeight: 600,
+                          fontSize: '0.8rem',
+                          transition: 'all 0.3s ease'
+                        }}
+                        className="course-arrow"
+                      >
+                        Learn More
+                        <ArrowIcon sx={{ ml: 0.5, fontSize: '0.9rem' }} />
+                      </Box>
+                    </CardContent>
+                  </Card>
+                ))}
+              </Box>
+            </Box>
+          ) : (
+            /* Mobile/Tablet: Grid layout */
+            <Grid container spacing={3}>
+              {courses.map((course, index) => (
+                <Grid item xs={12} sm={6} key={index}>
+                  <Card
+                    sx={{
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      borderRadius: 2,
+                      background: 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(248,250,252,0.9) 100%)',
+                      border: '1px solid rgba(102, 126, 234, 0.1)',
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                      transition: 'all 0.3s ease',
+                      cursor: 'pointer',
+                      minHeight: '220px',
+                      '&:hover': {
+                        transform: 'translateY(-6px)',
+                        boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
+                        border: `1px solid ${course.color}20`,
+                        '& .course-arrow': {
+                          transform: 'translateX(4px)',
+                          color: course.color
+                        }
+                      }
+                    }}
+                  >
+                    <CardContent sx={{ p: 2, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                      <Box sx={{ textAlign: 'center', mb: 1.5 }}>
+                        <Typography
+                          variant="h2"
+                          sx={{
+                            fontSize: '2rem',
+                            mb: 1,
+                            display: 'block'
+                          }}
+                        >
+                          {course.emoji}
+                        </Typography>
+                        <Typography
+                          variant="h6"
+                          component="h3"
+                          sx={{
+                            fontWeight: 700,
+                            mb: 1,
+                            color: course.color,
+                            fontSize: '1rem'
+                          }}
+                        >
+                          {course.title}
+                        </Typography>
+                      </Box>
+                      
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{
+                          lineHeight: 1.4,
+                          fontSize: '0.85rem',
+                          flexGrow: 1,
+                          mb: 1.5
+                        }}
+                      >
+                        {course.description}
+                      </Typography>
+
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: course.color,
+                          fontWeight: 600,
+                          fontSize: '0.8rem',
+                          transition: 'all 0.3s ease'
+                        }}
+                        className="course-arrow"
+                      >
+                        Learn More
+                        <ArrowIcon sx={{ ml: 0.5, fontSize: '0.9rem' }} />
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          )}
+        </Container>
+      </Box>
 
       {/* Testimonials Section */}
       <Box id="testimonials" sx={{ py: { xs: 8, md: 12 }, bgcolor: 'white' }}>

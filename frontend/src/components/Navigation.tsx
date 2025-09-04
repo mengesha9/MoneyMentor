@@ -48,8 +48,8 @@ export const Navigation: React.FC<NavigationProps> = ({ onGetStarted, onLogin, s
 
   const menuItems = [
     { text: 'Features', href: '#features' },
-    { text: 'How It Works', href: '#how-it-works' },
-    { text: 'Pricing', href: '#pricing' },
+    { text: 'Learning Process', href: '#learning-process' },
+    { text: 'Courses', href: '#courses' },
     { text: 'Testimonials', href: '#testimonials' }
   ];
 
