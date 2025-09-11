@@ -7,9 +7,9 @@ export interface ApiConfig {
   sessionId: string;
 }
 
-const BACKEND_URL = 'http://localhost:8080';
+// const BACKEND_URL = 'http://localhost:8080';
 // const BACKEND_URL = 'https://backend-647308514289.us-central1.run.app';
-// const BACKEND_URL = 'https://backend-647308514289.us-central1.run.app';
+const BACKEND_URL = 'https://backend-647308514289.us-central1.run.app';
 // const BACKEND_TWO_URL = 'http://localhost:8000';
 const BACKEND_TWO_URL = 'https://backend-2-647308514289.us-central1.run.app';
 

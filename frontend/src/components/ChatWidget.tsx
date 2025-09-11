@@ -385,8 +385,8 @@ interface ChatWidgetProps {
 }
 
 export const ChatWidget: React.FC<ChatWidgetProps> = ({
-  // apiUrl = 'https://backend-647308514289.us-central1.run.app',
-  apiUrl = 'http://localhost:8080',
+  apiUrl = 'https://backend-647308514289.us-central1.run.app',
+  // apiUrl = 'http://localhost:8080',
   position = 'fullscreen',
   theme = 'light'
 }) => {
