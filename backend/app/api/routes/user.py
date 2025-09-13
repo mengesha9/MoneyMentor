@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, BackgroundTasks
 from typing import Dict, Any, Optional
 import logging
 from datetime import timedelta
@@ -27,6 +27,7 @@ def get_user_service() -> UserService:
 @router.post("/register", response_model=AuthResponse)
 async def register_user(
     user_data: UserCreate,
+    background_tasks: BackgroundTasks,
     user_service: UserService = Depends(get_user_service)
 ):
     """Register a new user account"""
@@ -62,8 +63,8 @@ async def register_user(
         # Create refresh token
         refresh_token = create_refresh_token(user["id"])
         
-        # Get user profile
-        profile = await user_service.get_user_profile(user["id"])
+        # Get user profile (now with background sync)
+        profile = await user_service.get_user_profile(user["id"], background_tasks)
         
         return AuthResponse(
             access_token=access_token,
@@ -148,7 +149,7 @@ async def login_user(
 @router.post("/refresh", response_model=TokenRefreshResponse)
 async def refresh_token_endpoint(token_refresh: TokenRefresh):
     """Refresh access token using a valid refresh token"""
-    verified = verify_refresh_token(token_refresh.refresh_token)
+    verified = await verify_refresh_token(token_refresh.refresh_token)
     if not verified:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -164,7 +165,7 @@ async def refresh_token_endpoint(token_refresh: TokenRefresh):
     # Issue new refresh token (rotate)
     new_refresh_token = create_refresh_token(user_id)
     # Revoke the old refresh token
-    revoke_refresh_token(token_refresh.refresh_token)
+    await revoke_refresh_token(token_refresh.refresh_token)
     return TokenRefreshResponse(
         access_token=access_token,
         refresh_token=new_refresh_token,
@@ -410,7 +411,7 @@ async def logout_user(logout_data: LogoutRequest):
         
         # Try to revoke the token, but don't fail if it doesn't exist
         try:
-            success = revoke_refresh_token(logout_data.refresh_token)
+            success = await revoke_refresh_token(logout_data.refresh_token)
             if success:
                 logger.info(f"✅ Token revoked successfully")
             else:
@@ -437,7 +438,7 @@ async def logout_all_sessions(
     """Logout user from all sessions by revoking all refresh tokens"""
     try:
         # Revoke all refresh tokens for the user
-        success = revoke_all_user_tokens(current_user["id"])
+        success = await revoke_all_user_tokens(current_user["id"])
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

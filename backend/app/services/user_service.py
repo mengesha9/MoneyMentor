@@ -6,6 +6,7 @@ from app.core.auth import get_user_by_id, update_user, delete_user, change_user_
 from app.models.schemas import UserProfileResponse, UserProfileUpdate
 from app.services.triggered_sync_service import triggered_sync_service
 import asyncio
+from fastapi import BackgroundTasks
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,7 @@ class UserService:
     def __init__(self):
         self.supabase = get_supabase()
     
-    async def get_user_profile(self, user_id: str) -> Optional[UserProfileResponse]:
+    async def get_user_profile(self, user_id: str, background_tasks: Optional[BackgroundTasks] = None) -> Optional[UserProfileResponse]:
         """Get user profile with statistics"""
         try:
             result = self.supabase.table('user_profiles').select('*').eq('user_id', user_id).single().execute()
@@ -25,19 +26,19 @@ class UserService:
             
             # If no profile exists, create one
             logger.info(f"Creating profile for user {user_id}")
-            return await self.create_user_profile(user_id)
+            return await self.create_user_profile(user_id, background_tasks)
             
         except Exception as e:
             logger.error(f"Error getting user profile: {e}")
             # Try to create profile even if query failed
             try:
                 logger.info(f"Attempting to create profile for user {user_id} after error")
-                return await self.create_user_profile(user_id)
+                return await self.create_user_profile(user_id, background_tasks)
             except Exception as create_error:
                 logger.error(f"Failed to create profile for user {user_id}: {create_error}")
                 return None
     
-    async def create_user_profile(self, user_id: str) -> Optional[UserProfileResponse]:
+    async def create_user_profile(self, user_id: str, background_tasks: Optional[BackgroundTasks] = None) -> Optional[UserProfileResponse]:
         """Create a new user profile"""
         try:
             profile_data = {
@@ -53,9 +54,14 @@ class UserService:
             result = self.supabase.table('user_profiles').insert(profile_data).execute()
             
             if result.data:
-                # Trigger sync to Google Sheets (non-blocking)
-                triggered_sync_service.trigger_sync(f"user_profile_created_{user_id}")
-                logger.info(f"User profile created for {user_id} - sync triggered")
+                # Trigger sync to Google Sheets asynchronously in background
+                if background_tasks:
+                    background_tasks.add_task(triggered_sync_service.trigger_sync_background, f"user_profile_created_{user_id}")
+                    logger.info(f"User profile created for {user_id} - background sync scheduled")
+                else:
+                    # Fallback to synchronous call if no background tasks provided
+                    triggered_sync_service.trigger_sync(f"user_profile_created_{user_id}")
+                    logger.info(f"User profile created for {user_id} - sync triggered synchronously")
                 return UserProfileResponse(**result.data[0])
             
             return None
@@ -64,7 +70,7 @@ class UserService:
             logger.error(f"Error creating user profile: {e}")
             return None
     
-    async def update_user_profile(self, user_id: str, profile_data: UserProfileUpdate) -> Optional[UserProfileResponse]:
+    async def update_user_profile(self, user_id: str, profile_data: UserProfileUpdate, background_tasks: Optional[BackgroundTasks] = None) -> Optional[UserProfileResponse]:
         """Update user profile statistics"""
         try:
             # Convert Pydantic model to dict, excluding None values
@@ -79,9 +85,14 @@ class UserService:
             result = self.supabase.table('user_profiles').update(update_data).eq('user_id', user_id).execute()
             
             if result.data:
-                # Trigger sync to Google Sheets (non-blocking)
-                triggered_sync_service.trigger_sync(f"user_profile_updated_{user_id}")
-                logger.debug(f"User profile updated for {user_id} - sync triggered")
+                # Trigger sync to Google Sheets asynchronously in background
+                if background_tasks:
+                    background_tasks.add_task(triggered_sync_service.trigger_sync_background, f"user_profile_updated_{user_id}")
+                    logger.debug(f"User profile updated for {user_id} - background sync scheduled")
+                else:
+                    # Fallback to synchronous call if no background tasks provided
+                    triggered_sync_service.trigger_sync(f"user_profile_updated_{user_id}")
+                    logger.debug(f"User profile updated for {user_id} - sync triggered synchronously")
                 return UserProfileResponse(**result.data[0])
             
             return None
