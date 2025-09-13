@@ -110,11 +110,14 @@ class GoogleSheetsService:
             
             # 2. Set up all required tabs with headers
             sheet_configs = {
+                'UserProfiles': ['first_name', 'last_name', 'email', 'total_chats', 'quizzes_taken', 'day_streak', 'days_active', 'courses_enrolled', 'total_course_score', 'courses_completed', 'course_details'],
                 'QuizResponses': ['user_id', 'timestamp', 'quiz_id', 'topic_tag', 'selected_option', 'correct', 'session_id'],
                 'EngagementLogs': ['user_id', 'session_id', 'messages_per_session', 'session_duration', 'quizzes_attempted', 'pretest_completed', 'last_activity', 'confidence_rating'],
                 'ChatLogs': ['user_id', 'session_id', 'timestamp', 'message_type', 'message', 'response'],
                 'CourseProgress': ['user_id', 'session_id', 'course_id', 'course_name', 'page_number', 'total_pages', 'completed', 'timestamp'],
-                'UserProfiles': ['first_name', 'last_name', 'email', 'total_chats', 'quizzes_taken', 'day_streak', 'days_active', 'courses_enrolled', 'total_course_score', 'courses_completed', 'course_details']
+                'course_statistics': ['First Name', 'Last Name', 'Email', 'Course Name', 'Total Questions Taken', 'Score (%)', 'Current Level', 'Last Activity'],
+                'ConfidencePolls': ['user_id', 'session_id', 'timestamp', 'confidence_rating', 'topic', 'context'],
+                'UsageLogs': ['user_id', 'session_id', 'timestamp', 'action', 'feature', 'duration', 'metadata']
             }
             
             for sheet_name, headers in sheet_configs.items():
@@ -383,7 +386,7 @@ MoneyMentor Team
                 return False
             
             # Test access to all required tabs
-            required_tabs = ['QuizResponses', 'EngagementLogs', 'ChatLogs', 'CourseProgress', 'UserProfiles']
+            required_tabs = ['UserProfiles', 'QuizResponses', 'EngagementLogs', 'ChatLogs', 'CourseProgress', 'course_statistics', 'ConfidencePolls', 'UsageLogs']
             
             for tab_name in required_tabs:
                 try:
@@ -829,9 +832,13 @@ MoneyMentor Team
             logger.error(f"Failed to export user profiles to Google Sheets: {e}")
             return False
 
-    async def get_all_user_profiles_for_export(self) -> List[Dict[str, Any]]:
+    async def get_all_user_profiles_for_export(self, incremental: bool = False, last_sync_time: Optional[datetime] = None) -> List[Dict[str, Any]]:
         """
         Helper method to fetch all user profiles with user information for export
+        
+        Args:
+            incremental: If True, only fetch profiles updated since last_sync_time
+            last_sync_time: Timestamp for incremental sync (only used if incremental=True)
         
         Returns:
             List of user profile dictionaries ready for Google Sheets export
@@ -841,17 +848,26 @@ MoneyMentor Team
             
             supabase = get_supabase()
             
-            # Get all user profiles with user information and course statistics
-            result = supabase.table('user_profiles').select(
-                'user_id, total_chats, quizzes_taken, day_streak, days_active, course_statistics'
-            ).execute()
+            # Build query based on sync type
+            if incremental and last_sync_time:
+                # Incremental sync - only get updated profiles
+                result = supabase.table('user_profiles').select(
+                    'user_id, total_chats, quizzes_taken, day_streak, days_active, course_statistics, updated_at'
+                ).gte('updated_at', last_sync_time.isoformat()).execute()
+                logger.info(f"Incremental sync: fetching profiles updated since {last_sync_time}")
+            else:
+                # Full sync - get all profiles
+                result = supabase.table('user_profiles').select(
+                    'user_id, total_chats, quizzes_taken, day_streak, days_active, course_statistics'
+                ).execute()
+                logger.info("Full sync: fetching all user profiles")
             
             user_profiles = []
             for profile in result.data:
                 user_id = profile['user_id']
                 
                 try:
-                    # Get user information (first_name, last_name, email)
+                    # Get user information (first_name, last_name, email) - cache this for performance
                     user_result = supabase.table('users').select(
                         'first_name, last_name, email'
                     ).eq('id', user_id).single().execute()
@@ -874,7 +890,8 @@ MoneyMentor Team
                             'courses_enrolled': course_summary['courses_enrolled'],
                             'total_course_score': course_summary['total_score'],
                             'courses_completed': course_summary['courses_completed'],
-                            'course_details': course_summary['course_details']
+                            'course_details': course_summary['course_details'],
+                            'updated_at': profile.get('updated_at', datetime.utcnow().isoformat())
                         })
                     else:
                         # Add profile without user details if user not found
@@ -893,7 +910,8 @@ MoneyMentor Team
                             'courses_enrolled': course_summary['courses_enrolled'],
                             'total_course_score': course_summary['total_score'],
                             'courses_completed': course_summary['courses_completed'],
-                            'course_details': course_summary['course_details']
+                            'course_details': course_summary['course_details'],
+                            'updated_at': profile.get('updated_at', datetime.utcnow().isoformat())
                         })
                 except Exception as user_error:
                     logger.warning(f"Could not get user details for {user_id}: {user_error}")
@@ -913,12 +931,466 @@ MoneyMentor Team
                         'courses_enrolled': course_summary['courses_enrolled'],
                         'total_course_score': course_summary['total_score'],
                         'courses_completed': course_summary['courses_completed'],
-                        'course_details': course_summary['course_details']
+                        'course_details': course_summary['course_details'],
+                        'updated_at': profile.get('updated_at', datetime.utcnow().isoformat())
                     })
             
-            logger.info(f"Retrieved {len(user_profiles)} user profiles for export")
+            logger.info(f"Retrieved {len(user_profiles)} user profiles for export ({'incremental' if incremental else 'full'} sync)")
             return user_profiles
             
         except Exception as e:
             logger.error(f"Failed to get user profiles for export: {e}")
-            return [] 
+            return []
+    
+    async def update_user_profiles_incremental(self, user_profiles: List[Dict[str, Any]]) -> bool:
+        """
+        Update only changed user profiles in Google Sheets instead of full replacement
+        
+        Args:
+            user_profiles: List of user profile dictionaries to update
+        
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            if not self.service or not self.spreadsheet_id:
+                logger.warning("Google Sheets service not available")
+                return False
+            
+            if not user_profiles:
+                logger.info("No user profiles to update incrementally")
+                return True
+            
+            # Get existing UserProfiles data to find rows to update
+            existing_data = self.service.spreadsheets().values().get(
+                spreadsheetId=self.spreadsheet_id,
+                range='UserProfiles!A:A'
+            ).execute()
+            
+            existing_rows = existing_data.get('values', [])
+            if not existing_rows:
+                # No existing data, do full export
+                logger.info("No existing UserProfiles data found, performing full export")
+                return await self.export_user_profiles_to_sheet(user_profiles)
+            
+            # Create a map of user_id to row index for existing data
+            user_id_to_row = {}
+            for i, row in enumerate(existing_rows[1:], start=2):  # Skip header, start from row 2
+                if row and len(row) > 0:
+                    user_id_to_row[row[0]] = i
+            
+            # Prepare updates for existing users and new users
+            updates = []
+            new_profiles = []
+            
+            for profile in user_profiles:
+                user_id = profile['user_id']
+                if user_id in user_id_to_row:
+                    # Update existing user
+                    row_index = user_id_to_row[user_id]
+                    row_data = [
+                        profile.get('first_name', ''),
+                        profile.get('last_name', ''),
+                        profile.get('email', ''),
+                        str(profile.get('total_chats', 0)),
+                        str(profile.get('quizzes_taken', 0)),
+                        str(profile.get('day_streak', 0)),
+                        str(profile.get('days_active', 0)),
+                        str(profile.get('courses_enrolled', 0)),
+                        str(profile.get('total_course_score', 0)),
+                        str(profile.get('courses_completed', 0)),
+                        profile.get('course_details', '')
+                    ]
+                    updates.append({
+                        'range': f'UserProfiles!A{row_index}:K{row_index}',
+                        'values': [row_data]
+                    })
+                else:
+                    # New user to add
+                    new_profiles.append(profile)
+            
+            # Apply updates for existing users
+            if updates:
+                try:
+                    body = {'data': updates, 'valueInputOption': 'RAW'}
+                    result = await asyncio.wait_for(
+                        asyncio.to_thread(
+                            lambda: self.service.spreadsheets().values().batchUpdate(
+                                spreadsheetId=self.spreadsheet_id,
+                                body=body
+                            ).execute()
+                        ),
+                        timeout=120.0
+                    )
+                    logger.info(f"Updated {len(updates)} existing user profiles in Google Sheets")
+                except Exception as update_error:
+                    logger.error(f"Failed to update existing profiles: {update_error}")
+                    return False
+            
+            # Append new users
+            if new_profiles:
+                try:
+                    # Convert new profiles to rows
+                    new_rows = []
+                    for profile in new_profiles:
+                        row_data = [
+                            profile.get('first_name', ''),
+                            profile.get('last_name', ''),
+                            profile.get('email', ''),
+                            str(profile.get('total_chats', 0)),
+                            str(profile.get('quizzes_taken', 0)),
+                            str(profile.get('day_streak', 0)),
+                            str(profile.get('days_active', 0)),
+                            str(profile.get('courses_enrolled', 0)),
+                            str(profile.get('total_course_score', 0)),
+                            str(profile.get('courses_completed', 0)),
+                            profile.get('course_details', '')
+                        ]
+                        new_rows.append(row_data)
+                    
+                    body = {'values': new_rows}
+                    result = await asyncio.wait_for(
+                        asyncio.to_thread(
+                            lambda: self.service.spreadsheets().values().append(
+                                spreadsheetId=self.spreadsheet_id,
+                                range='UserProfiles!A:K',
+                                valueInputOption='RAW',
+                                insertDataOption='INSERT_ROWS',
+                                body=body
+                            ).execute()
+                        ),
+                        timeout=120.0
+                    )
+                    logger.info(f"Added {len(new_profiles)} new user profiles to Google Sheets")
+                except Exception as append_error:
+                    logger.error(f"Failed to append new profiles: {append_error}")
+                    return False
+            
+            logger.info(f"Successfully updated {len(updates)} and added {len(new_profiles)} user profiles")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to update user profiles incrementally: {e}")
+            return False
+    
+    async def sync_quiz_responses(self, last_sync_time: Optional[datetime] = None) -> bool:
+        """
+        Sync quiz responses to Google Sheets QuizResponses tab
+        
+        Args:
+            last_sync_time: Only sync responses after this time (for incremental sync)
+        
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            if not self.service or not self.spreadsheet_id:
+                logger.warning("Google Sheets service not available")
+                return False
+            
+            from app.core.database import get_supabase
+            supabase = get_supabase()
+            
+            # Query quiz responses
+            if last_sync_time:
+                result = supabase.table('quiz_responses').select(
+                    'user_id, timestamp, quiz_id, topic, selected, correct, session_id, explanation, course_id, page_index'
+                ).gte('created_at', last_sync_time.isoformat()).execute()
+                logger.info(f"Syncing quiz responses since {last_sync_time}")
+            else:
+                result = supabase.table('quiz_responses').select(
+                    'user_id, timestamp, quiz_id, topic, selected, correct, session_id, explanation, course_id, page_index'
+                ).execute()
+                logger.info("Syncing all quiz responses")
+            
+            if not result.data:
+                logger.info("No quiz responses to sync")
+                return True
+            
+            # Prepare data for Google Sheets
+            rows_data = []
+            for response in result.data:
+                row_data = [
+                    response.get('user_id', ''),
+                    response.get('timestamp', ''),
+                    response.get('quiz_id', ''),
+                    response.get('topic', ''),
+                    response.get('selected', ''),
+                    'TRUE' if response.get('correct', False) else 'FALSE',
+                    response.get('session_id', ''),
+                    response.get('explanation', ''),
+                    str(response.get('course_id', '')),
+                    str(response.get('page_index', ''))
+                ]
+                rows_data.append(row_data)
+            
+            # Append to QuizResponses tab
+            body = {'values': rows_data}
+            result = await asyncio.wait_for(
+                asyncio.to_thread(
+                    lambda: self.service.spreadsheets().values().append(
+                        spreadsheetId=self.spreadsheet_id,
+                        range='QuizResponses!A:J',
+                        valueInputOption='RAW',
+                        insertDataOption='INSERT_ROWS',
+                        body=body
+                    ).execute()
+                ),
+                timeout=120.0
+            )
+            
+            logger.info(f"Synced {len(rows_data)} quiz responses to Google Sheets")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to sync quiz responses: {e}")
+            return False
+    
+    async def sync_engagement_logs(self, last_sync_time: Optional[datetime] = None) -> bool:
+        """
+        Sync engagement logs to Google Sheets EngagementLogs tab
+        
+        Args:
+            last_sync_time: Only sync logs after this time (for incremental sync)
+        
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            if not self.service or not self.spreadsheet_id:
+                logger.warning("Google Sheets service not available")
+                return False
+            
+            from app.core.database import get_supabase
+            supabase = get_supabase()
+            
+            # Query user sessions for engagement data
+            if last_sync_time:
+                result = supabase.table('user_sessions').select(
+                    'user_id, id, created_at, updated_at, chat_history, quiz_history, progress'
+                ).gte('updated_at', last_sync_time.isoformat()).execute()
+                logger.info(f"Syncing engagement logs since {last_sync_time}")
+            else:
+                result = supabase.table('user_sessions').select(
+                    'user_id, id, created_at, updated_at, chat_history, quiz_history, progress'
+                ).execute()
+                logger.info("Syncing all engagement logs")
+            
+            if not result.data:
+                logger.info("No engagement data to sync")
+                return True
+            
+            # Prepare data for Google Sheets
+            rows_data = []
+            for session in result.data:
+                # Calculate session metrics
+                chat_history = session.get('chat_history', [])
+                quiz_history = session.get('quiz_history', [])
+                
+                messages_per_session = len(chat_history) if isinstance(chat_history, list) else 0
+                quizzes_attempted = len(quiz_history) if isinstance(quiz_history, list) else 0
+                
+                # Calculate session duration (if we have start/end times)
+                created_at = session.get('created_at', '')
+                updated_at = session.get('updated_at', '')
+                
+                # Check for pretest completion and confidence rating from progress
+                progress = session.get('progress', {})
+                pretest_completed = progress.get('pretest_completed', False)
+                confidence_rating = progress.get('confidence_rating', '')
+                
+                row_data = [
+                    session.get('user_id', ''),
+                    session.get('id', ''),
+                    str(messages_per_session),
+                    '',  # session_duration - would need to calculate from events
+                    str(quizzes_attempted),
+                    'TRUE' if pretest_completed else 'FALSE',
+                    updated_at or created_at,  # last_activity
+                    str(confidence_rating)
+                ]
+                rows_data.append(row_data)
+            
+            # Append to EngagementLogs tab
+            body = {'values': rows_data}
+            result = await asyncio.wait_for(
+                asyncio.to_thread(
+                    lambda: self.service.spreadsheets().values().append(
+                        spreadsheetId=self.spreadsheet_id,
+                        range='EngagementLogs!A:H',
+                        valueInputOption='RAW',
+                        insertDataOption='INSERT_ROWS',
+                        body=body
+                    ).execute()
+                ),
+                timeout=120.0
+            )
+            
+            logger.info(f"Synced {len(rows_data)} engagement logs to Google Sheets")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to sync engagement logs: {e}")
+            return False
+    
+    async def sync_chat_logs(self, last_sync_time: Optional[datetime] = None) -> bool:
+        """
+        Sync chat logs to Google Sheets ChatLogs tab
+        
+        Args:
+            last_sync_time: Only sync logs after this time (for incremental sync)
+        
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            if not self.service or not self.spreadsheet_id:
+                logger.warning("Google Sheets service not available")
+                return False
+            
+            from app.core.database import get_supabase
+            supabase = get_supabase()
+            
+            # Query chat history
+            if last_sync_time:
+                result = supabase.table('chat_history').select(
+                    'user_id, message, role, created_at, session_id'
+                ).gte('created_at', last_sync_time.isoformat()).execute()
+                logger.info(f"Syncing chat logs since {last_sync_time}")
+            else:
+                result = supabase.table('chat_history').select(
+                    'user_id, message, role, created_at, session_id'
+                ).execute()
+                logger.info("Syncing all chat logs")
+            
+            if not result.data:
+                logger.info("No chat logs to sync")
+                return True
+            
+            # Prepare data for Google Sheets
+            rows_data = []
+            for chat in result.data:
+                # Determine message type
+                role = chat.get('role', '')
+                if role == 'user':
+                    message_type = 'user'
+                elif role == 'assistant':
+                    message_type = 'assistant'
+                else:
+                    message_type = 'system'
+                
+                row_data = [
+                    chat.get('user_id', ''),
+                    chat.get('session_id', ''),
+                    chat.get('created_at', ''),
+                    message_type,
+                    chat.get('message', ''),
+                    ''  # response - would need to pair user/assistant messages
+                ]
+                rows_data.append(row_data)
+            
+            # Append to ChatLogs tab
+            body = {'values': rows_data}
+            result = await asyncio.wait_for(
+                asyncio.to_thread(
+                    lambda: self.service.spreadsheets().values().append(
+                        spreadsheetId=self.spreadsheet_id,
+                        range='ChatLogs!A:F',
+                        valueInputOption='RAW',
+                        insertDataOption='INSERT_ROWS',
+                        body=body
+                    ).execute()
+                ),
+                timeout=120.0
+            )
+            
+            logger.info(f"Synced {len(rows_data)} chat logs to Google Sheets")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to sync chat logs: {e}")
+            return False
+    
+    async def sync_course_progress(self, last_sync_time: Optional[datetime] = None) -> bool:
+        """
+        Sync course progress to Google Sheets CourseProgress tab
+        
+        Args:
+            last_sync_time: Only sync progress after this time (for incremental sync)
+        
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            if not self.service or not self.spreadsheet_id:
+                logger.warning("Google Sheets service not available")
+                return False
+            
+            from app.core.database import get_supabase
+            supabase = get_supabase()
+            
+            # Query user course sessions
+            if last_sync_time:
+                result = supabase.table('user_course_sessions').select(
+                    'user_id, course_id, current_page_index, completed, started_at, completed_at, updated_at'
+                ).gte('updated_at', last_sync_time.isoformat()).execute()
+                logger.info(f"Syncing course progress since {last_sync_time}")
+            else:
+                result = supabase.table('user_course_sessions').select(
+                    'user_id, course_id, current_page_index, completed, started_at, completed_at, updated_at'
+                ).execute()
+                logger.info("Syncing all course progress")
+            
+            if not result.data:
+                logger.info("No course progress to sync")
+                return True
+            
+            # Get course information for names and page counts
+            course_info = {}
+            courses_result = supabase.table('courses').select('id, title').execute()
+            for course in courses_result.data:
+                course_info[course['id']] = course['title']
+            
+            # Prepare data for Google Sheets
+            rows_data = []
+            for session in result.data:
+                course_id = session.get('course_id')
+                course_name = course_info.get(course_id, f'Course {course_id}')
+                
+                # Get total pages for this course
+                course_pages_result = supabase.table('course_pages').select('id').eq('course_id', course_id).execute()
+                total_pages = len(course_pages_result.data) if course_pages_result.data else 0
+                
+                row_data = [
+                    session.get('user_id', ''),
+                    '',  # session_id - not directly available
+                    str(course_id),
+                    course_name,
+                    str(session.get('current_page_index', 0)),
+                    str(total_pages),
+                    'TRUE' if session.get('completed', False) else 'FALSE',
+                    session.get('completed_at', session.get('updated_at', ''))
+                ]
+                rows_data.append(row_data)
+            
+            # Append to CourseProgress tab
+            body = {'values': rows_data}
+            result = await asyncio.wait_for(
+                asyncio.to_thread(
+                    lambda: self.service.spreadsheets().values().append(
+                        spreadsheetId=self.spreadsheet_id,
+                        range='CourseProgress!A:H',
+                        valueInputOption='RAW',
+                        insertDataOption='INSERT_ROWS',
+                        body=body
+                    ).execute()
+                ),
+                timeout=120.0
+            )
+            
+            logger.info(f"Synced {len(rows_data)} course progress records to Google Sheets")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to sync course progress: {e}")
+            return False 

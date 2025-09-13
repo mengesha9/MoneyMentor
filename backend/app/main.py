@@ -28,7 +28,8 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
-    openapi_url="/openapi.json"
+    openapi_url="/openapi.json",
+    lifespan=lifespan
 )
 
 # CORS middleware
@@ -39,6 +40,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Request priority middleware (pauses background sync during user requests)
+from app.middleware.request_priority import RequestPriorityMiddleware
+app.add_middleware(RequestPriorityMiddleware)
 
 # Custom exception handler for validation errors
 @app.exception_handler(RequestValidationError)
