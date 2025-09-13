@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, BackgroundTasks
 from typing import Dict, Any, Optional
 import logging
 from datetime import timedelta
@@ -27,6 +27,7 @@ def get_user_service() -> UserService:
 @router.post("/register", response_model=AuthResponse)
 async def register_user(
     user_data: UserCreate,
+    background_tasks: BackgroundTasks,
     user_service: UserService = Depends(get_user_service)
 ):
     """Register a new user account"""
@@ -62,8 +63,8 @@ async def register_user(
         # Create refresh token
         refresh_token = create_refresh_token(user["id"])
         
-        # Get user profile
-        profile = await user_service.get_user_profile(user["id"])
+        # Get user profile (now with background sync)
+        profile = await user_service.get_user_profile(user["id"], background_tasks)
         
         return AuthResponse(
             access_token=access_token,
