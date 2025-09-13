@@ -1,5 +1,6 @@
 import os
 import asyncio
+import logging
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
@@ -9,6 +10,13 @@ from app.api.routes import chat, quiz, calculation, progress, content, course, s
 from app.services.background_sync_service import background_sync_service
 from app.services.database_listener_service import database_listener_service
 from app.services.session_cleanup_service import session_cleanup_service
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 
 port = int(os.environ.get("PORT", 8080))

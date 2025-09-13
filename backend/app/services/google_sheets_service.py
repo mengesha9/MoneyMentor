@@ -294,7 +294,7 @@ MoneyMentor Team
             # Set socket timeout for this request
             import socket
             original_timeout = socket.getdefaulttimeout()
-            socket.setdefaulttimeout(15.0)  # 15 second timeout
+            socket.setdefaulttimeout(60.0)  # Increased from 15 to 60 seconds
             
             try:
                 result = self.service.spreadsheets().values().append(
@@ -505,14 +505,14 @@ MoneyMentor Team
                 # Run the API call with timeout
                 result = await asyncio.wait_for(
                     asyncio.to_thread(make_api_call),
-                    timeout=2.0  # Reduced from 10.0 to 2.0 seconds
+                    timeout=60.0  # Increased from 2.0 to 60.0 seconds
                 )
                 
                 logger.info(f"Engagement data logged to Google Sheets: {result.get('updates', {}).get('updatedRows', 0)} rows updated")
                 return True
                 
             except asyncio.TimeoutError:
-                logger.error("Google Sheets API call timed out after 2 seconds")
+                logger.error("Google Sheets API call timed out after 60 seconds")
                 return False
             except Exception as api_error:
                 logger.error(f"Google Sheets API error: {api_error}")
@@ -573,11 +573,11 @@ MoneyMentor Team
                 # Run the API call with timeout
                 result = await asyncio.wait_for(
                     asyncio.to_thread(make_api_call),
-                    timeout=2.0  # 2 second timeout
+                    timeout=60.0  # Increased from 2.0 to 60.0 seconds
                 )
                 
             except asyncio.TimeoutError:
-                logger.error("Google Sheets chat logging timed out after 2 seconds")
+                logger.error("Google Sheets chat logging timed out after 60 seconds")
                 return False
             except Exception as api_error:
                 logger.error(f"Google Sheets API error: {api_error}")
@@ -648,11 +648,11 @@ MoneyMentor Team
                 # Run the API call with timeout
                 result = await asyncio.wait_for(
                     asyncio.to_thread(make_api_call),
-                    timeout=2.0  # 2 second timeout
+                    timeout=60.0  # Increased from 2.0 to 60.0 seconds
                 )
                 
             except asyncio.TimeoutError:
-                logger.error("Google Sheets course progress logging timed out after 2 seconds")
+                logger.error("Google Sheets course progress logging timed out after 60 seconds")
                 return False
             except Exception as api_error:
                 logger.error(f"Google Sheets API error: {api_error}")

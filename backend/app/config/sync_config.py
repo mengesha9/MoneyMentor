@@ -5,7 +5,7 @@ Easy configuration for Google Sheets sync intervals and behavior
 
 # Sync intervals (in seconds)
 SYNC_INTERVALS = {
-    'triggered_sync_cooldown': 300,  # 5 minutes between triggered syncs
+    'triggered_sync_cooldown': 30,   # Reduced from 300 to 30 seconds (30s between triggered syncs)
     'manual_sync_cooldown': 120,     # 2 minutes between manual syncs
     'background_sync_interval': 1800, # 30 minutes for background sync (if enabled)
 }
@@ -25,7 +25,7 @@ SYNC_SETTINGS = {
 GOOGLE_SHEETS_SETTINGS = {
     'max_retry_attempts': 3,          # Max retry attempts for failed syncs
     'retry_delay_seconds': 5,         # Delay between retry attempts
-    'timeout_seconds': 30,            # Timeout for Google Sheets API calls
+    'timeout_seconds': 60,            # Increased from 15 to 60 seconds timeout
 }
 
 def get_sync_interval(interval_type: str) -> int:
