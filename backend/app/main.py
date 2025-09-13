@@ -1,6 +1,7 @@
 import os
 import asyncio
 import logging
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
@@ -17,6 +18,63 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Handle application startup and shutdown events"""
+    logger.info("🚀 Starting MoneyMentor API...")
+
+    # Startup: Initialize background services
+    try:
+        logger.info("🔄 Starting background sync service...")
+        await background_sync_service.start_background_sync()
+        logger.info("✅ Background sync service started successfully")
+    except Exception as e:
+        logger.error(f"❌ Failed to start background sync service: {e}")
+
+    try:
+        logger.info("🔄 Starting database listener service...")
+        await database_listener_service.start_listener()
+        logger.info("✅ Database listener service started successfully")
+    except Exception as e:
+        logger.error(f"❌ Failed to start database listener service: {e}")
+
+    try:
+        logger.info("🔄 Starting session cleanup service...")
+        await session_cleanup_service.start_cleanup_service()
+        logger.info("✅ Session cleanup service started successfully")
+    except Exception as e:
+        logger.error(f"❌ Failed to start session cleanup service: {e}")
+
+    logger.info("🎉 All background services started successfully")
+
+    yield
+
+    # Shutdown: Clean up background services
+    logger.info("🛑 Shutting down MoneyMentor API...")
+
+    try:
+        logger.info("🛑 Stopping background sync service...")
+        await background_sync_service.stop_background_sync()
+        logger.info("✅ Background sync service stopped")
+    except Exception as e:
+        logger.error(f"❌ Error stopping background sync service: {e}")
+
+    try:
+        logger.info("🛑 Stopping database listener service...")
+        await database_listener_service.stop_listener()
+        logger.info("✅ Database listener service stopped")
+    except Exception as e:
+        logger.error(f"❌ Error stopping database listener service: {e}")
+
+    try:
+        logger.info("🛑 Stopping session cleanup service...")
+        await session_cleanup_service.stop_cleanup_service()
+        logger.info("✅ Session cleanup service stopped")
+    except Exception as e:
+        logger.error(f"❌ Error stopping session cleanup service: {e}")
+
+    logger.info("👋 MoneyMentor API shutdown complete")
 
 
 port = int(os.environ.get("PORT", 8080))
