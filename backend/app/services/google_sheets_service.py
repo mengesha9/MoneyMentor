@@ -111,10 +111,14 @@ class GoogleSheetsService:
             # 2. Set up all required tabs with headers
             sheet_configs = {
                 'UserProfiles': ['first_name', 'last_name', 'email', 'total_chats', 'quizzes_taken', 'day_streak', 'days_active', 'courses_enrolled', 'total_course_score', 'courses_completed', 'course_details'],
+                'UserProfiles': ['first_name', 'last_name', 'email', 'total_chats', 'quizzes_taken', 'day_streak', 'days_active', 'courses_enrolled', 'total_course_score', 'courses_completed', 'course_details'],
                 'QuizResponses': ['user_id', 'timestamp', 'quiz_id', 'topic_tag', 'selected_option', 'correct', 'session_id'],
                 'EngagementLogs': ['user_id', 'session_id', 'messages_per_session', 'session_duration', 'quizzes_attempted', 'pretest_completed', 'last_activity', 'confidence_rating'],
                 'ChatLogs': ['user_id', 'session_id', 'timestamp', 'message_type', 'message', 'response'],
                 'CourseProgress': ['user_id', 'session_id', 'course_id', 'course_name', 'page_number', 'total_pages', 'completed', 'timestamp'],
+                'course_statistics': ['First Name', 'Last Name', 'Email', 'Course Name', 'Total Questions Taken', 'Score (%)', 'Current Level', 'Last Activity'],
+                'ConfidencePolls': ['user_id', 'session_id', 'timestamp', 'confidence_rating', 'topic', 'context'],
+                'UsageLogs': ['user_id', 'session_id', 'timestamp', 'action', 'feature', 'duration', 'metadata'],
                 'course_statistics': ['First Name', 'Last Name', 'Email', 'Course Name', 'Total Questions Taken', 'Score (%)', 'Current Level', 'Last Activity'],
                 'ConfidencePolls': ['user_id', 'session_id', 'timestamp', 'confidence_rating', 'topic', 'context'],
                 'UsageLogs': ['user_id', 'session_id', 'timestamp', 'action', 'feature', 'duration', 'metadata']
@@ -298,6 +302,7 @@ MoneyMentor Team
             import socket
             original_timeout = socket.getdefaulttimeout()
             socket.setdefaulttimeout(60.0)  # Increased from 15 to 60 seconds
+            socket.setdefaulttimeout(60.0)  # Increased from 15 to 60 seconds
             
             try:
                 result = self.service.spreadsheets().values().append(
@@ -387,6 +392,7 @@ MoneyMentor Team
             
             # Test access to all required tabs
             required_tabs = ['UserProfiles', 'QuizResponses', 'EngagementLogs', 'ChatLogs', 'CourseProgress', 'course_statistics', 'ConfidencePolls', 'UsageLogs']
+            required_tabs = ['UserProfiles', 'QuizResponses', 'EngagementLogs', 'ChatLogs', 'CourseProgress', 'course_statistics', 'ConfidencePolls', 'UsageLogs']
             
             for tab_name in required_tabs:
                 try:
@@ -455,7 +461,7 @@ MoneyMentor Team
     async def log_engagement(self, engagement_data: Dict[str, Any]) -> bool:
         """
         Log engagement data to Google Sheets EngagementLogs tab
-        
+         
         Args:
             engagement_data: Dictionary containing:
                 - user_id: str
@@ -484,7 +490,7 @@ MoneyMentor Team
                 str(engagement_data.get('session_duration', 0)),
                 str(engagement_data.get('quizzes_attempted', 0)),
                 'TRUE' if engagement_data.get('pretest_completed', False) else 'FALSE',
-                engagement_data.get('last_activity', datetime.utcnow().isoformat()),
+                engagement_data.get('last_activity', datetime.now(datetime.timezone.utc).isoformat()),
                 str(engagement_data.get('confidence_rating', ''))
             ]
             
@@ -508,13 +514,14 @@ MoneyMentor Team
                 # Run the API call with timeout
                 result = await asyncio.wait_for(
                     asyncio.to_thread(make_api_call),
-                    timeout=60.0  # Increased from 2.0 to 60.0 seconds
-                )
+                        timeout=60.0  # Increased from 2.0 to 60.0 seconds
+                    )
                 
                 logger.info(f"Engagement data logged to Google Sheets: {result.get('updates', {}).get('updatedRows', 0)} rows updated")
                 return True
                 
             except asyncio.TimeoutError:
+                logger.error("Google Sheets API call timed out after 60 seconds")
                 logger.error("Google Sheets API call timed out after 60 seconds")
                 return False
             except Exception as api_error:
@@ -580,6 +587,7 @@ MoneyMentor Team
                 )
                 
             except asyncio.TimeoutError:
+                logger.error("Google Sheets chat logging timed out after 60 seconds")
                 logger.error("Google Sheets chat logging timed out after 60 seconds")
                 return False
             except Exception as api_error:
@@ -655,6 +663,7 @@ MoneyMentor Team
                 )
                 
             except asyncio.TimeoutError:
+                logger.error("Google Sheets course progress logging timed out after 60 seconds")
                 logger.error("Google Sheets course progress logging timed out after 60 seconds")
                 return False
             except Exception as api_error:
@@ -840,6 +849,10 @@ MoneyMentor Team
             incremental: If True, only fetch profiles updated since last_sync_time
             last_sync_time: Timestamp for incremental sync (only used if incremental=True)
         
+        Args:
+            incremental: If True, only fetch profiles updated since last_sync_time
+            last_sync_time: Timestamp for incremental sync (only used if incremental=True)
+        
         Returns:
             List of user profile dictionaries ready for Google Sheets export
         """
@@ -935,6 +948,7 @@ MoneyMentor Team
                         'updated_at': profile.get('updated_at', datetime.utcnow().isoformat())
                     })
             
+            logger.info(f"Retrieved {len(user_profiles)} user profiles for export ({'incremental' if incremental else 'full'} sync)")
             logger.info(f"Retrieved {len(user_profiles)} user profiles for export ({'incremental' if incremental else 'full'} sync)")
             return user_profiles
             

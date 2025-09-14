@@ -31,7 +31,7 @@ class ComprehensiveSyncService:
             from app.core.database import get_supabase
 
             # Run initialization in thread pool to avoid blocking
-            self.sheets_service = await asyncio.to_thread(GoogleSheetsService)
+            self.sheets_service = await asyncio.to_thread(lambda: GoogleSheetsService())
             self.supabase = get_supabase()
 
             logger.info("✅ Services initialized successfully")
