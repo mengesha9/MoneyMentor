@@ -1,1 +1,5 @@
 node_modules
+
+backend/google_credentials.json
+/backend_2/google_credentials.json
+backend/google-credentials.json
