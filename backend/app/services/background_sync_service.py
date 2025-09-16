@@ -5,6 +5,10 @@ import threading
 from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
 from dataclasses import dataclass
+<<<<<<< HEAD
+=======
+from dataclasses import dataclass
+>>>>>>> d85deb6ccc16c078d2880175346e52a6fc973983
 from app.services.google_sheets_service import GoogleSheetsService
 from app.services.supabase_listener_service import supabase_listener_service
 
@@ -38,15 +42,41 @@ class BackgroundSyncService:
     - Graceful shutdown
     - Automatic retry logic
     """
+<<<<<<< HEAD
     
     def __init__(self, config: Optional[SyncConfig] = None):
         self.config = config or SyncConfig()
         self.sheets_service = None  # Initialize lazily to avoid startup delays
         self.comprehensive_sync_service = None  # Initialize comprehensive sync service
+=======
+    """Enhanced service for automatically syncing user profiles to Google Sheets
+    
+    Features:
+    - Non-blocking background operation
+    - Configurable sync intervals
+    - Comprehensive error handling and recovery
+    - Health monitoring and metrics
+    - Graceful shutdown
+    - Automatic retry logic
+    """
+    
+    def __init__(self, config: Optional[SyncConfig] = None):
+        self.config = config or SyncConfig()
+    def __init__(self, config: Optional[SyncConfig] = None):
+        self.config = config or SyncConfig()
+        self.sheets_service = None  # Initialize lazily to avoid startup delays
+        self.comprehensive_sync_service = None  # Initialize comprehensive sync service
+        self.comprehensive_sync_service = None  # Initialize comprehensive sync service
+>>>>>>> d85deb6ccc16c078d2880175346e52a6fc973983
         self.last_sync_time: Optional[datetime] = None
+        self.service_start_time: Optional[datetime] = None  # Track when service started
         self.is_running = False
         self.sync_task: Optional[asyncio.Task] = None
         self.health_check_task: Optional[asyncio.Task] = None
+<<<<<<< HEAD
+=======
+        self.health_check_task: Optional[asyncio.Task] = None
+>>>>>>> d85deb6ccc16c078d2880175346e52a6fc973983
         self.notification_sync_delay = 30  # 30 seconds delay after notification
         self.sync_in_progress = False  # Prevent overlapping syncs
         self.sync_enabled = True  # Can be disabled if Google Sheets is having issues
@@ -55,6 +85,13 @@ class BackgroundSyncService:
         self.last_health_check: Optional[datetime] = None
 
         # Enhanced statistics
+<<<<<<< HEAD
+=======
+        self.consecutive_failures = 0
+        self.last_health_check: Optional[datetime] = None
+
+        # Enhanced statistics
+>>>>>>> d85deb6ccc16c078d2880175346e52a6fc973983
         self.sync_stats = {
             'total_syncs': 0,
             'successful_syncs': 0,
@@ -66,11 +103,26 @@ class BackgroundSyncService:
             'last_error_time': None,
             'health_status': 'unknown',
             'uptime_seconds': 0,
+<<<<<<< HEAD
+=======
+            'start_time': None,
+            'last_sync_duration': 0,
+            'average_sync_duration': 0,
+            'total_sync_duration': 0,
+            'last_error': None,
+            'last_error_time': None,
+            'health_status': 'unknown',
+            'uptime_seconds': 0,
+>>>>>>> d85deb6ccc16c078d2880175346e52a6fc973983
             'start_time': None
         }
     
     async def start_background_sync(self):
         """Start the background sync service with enhanced monitoring"""
+<<<<<<< HEAD
+=======
+        """Start the background sync service with enhanced monitoring"""
+>>>>>>> d85deb6ccc16c078d2880175346e52a6fc973983
         if self.is_running:
             logger.warning("Background sync service is already running")
             return
@@ -88,6 +140,10 @@ class BackgroundSyncService:
         asyncio.create_task(self._initialize_sheets_service())
         
         # Start the main sync loop
+<<<<<<< HEAD
+=======
+        # Start the main sync loop
+>>>>>>> d85deb6ccc16c078d2880175346e52a6fc973983
         self.sync_task = asyncio.create_task(self._sync_loop())
         
         # Start health monitoring
@@ -98,10 +154,18 @@ class BackgroundSyncService:
     
     async def _initialize_sheets_service(self):
         """Initialize Google Sheets service and comprehensive sync service in background to avoid startup delays"""
+<<<<<<< HEAD
         try:
             logger.info("🔧 Initializing Google Sheets service in background...")
             # Run Google Sheets initialization in thread pool to avoid blocking
             self.sheets_service = await asyncio.to_thread(GoogleSheetsService)
+=======
+        """Initialize Google Sheets service and comprehensive sync service in background to avoid startup delays"""
+        try:
+            logger.info("🔧 Initializing Google Sheets service in background...")
+            # Run Google Sheets initialization in thread pool to avoid blocking
+            self.sheets_service = await asyncio.to_thread(lambda: GoogleSheetsService())
+>>>>>>> d85deb6ccc16c078d2880175346e52a6fc973983
             logger.info("✅ Google Sheets service initialized successfully")
 
             # Initialize comprehensive sync service in thread pool to avoid blocking
@@ -128,15 +192,32 @@ class BackgroundSyncService:
             self.sync_stats['health_status'] = 'unhealthy'
             self.sync_stats['last_error'] = str(e)
             self.sync_stats['last_error_time'] = datetime.utcnow()
+<<<<<<< HEAD
             self.sheets_service = None
             self.comprehensive_sync_service = None
     
     async def stop_background_sync(self):
         """Stop the background sync service with proper cleanup"""
+=======
+            self.sync_stats['health_status'] = 'unhealthy'
+            self.sync_stats['last_error'] = str(e)
+            self.sync_stats['last_error_time'] = datetime.utcnow()
+            self.sheets_service = None
+            self.comprehensive_sync_service = None
+            self.comprehensive_sync_service = None
+    
+    async def stop_background_sync(self):
+        """Stop the background sync service with proper cleanup"""
+        """Stop the background sync service with proper cleanup"""
+>>>>>>> d85deb6ccc16c078d2880175346e52a6fc973983
         if not self.is_running:
             return
         
         logger.info("🛑 Stopping enhanced background sync service...")
+<<<<<<< HEAD
+=======
+        logger.info("🛑 Stopping enhanced background sync service...")
+>>>>>>> d85deb6ccc16c078d2880175346e52a6fc973983
         self.is_running = False
         self.sync_stats['health_status'] = 'stopped'
         
@@ -149,6 +230,20 @@ class BackgroundSyncService:
                 pass
         
         # Cancel main sync task
+<<<<<<< HEAD
+=======
+        self.sync_stats['health_status'] = 'stopped'
+        
+        # Cancel health monitoring task
+        if self.health_check_task:
+            self.health_check_task.cancel()
+            try:
+                await self.health_check_task
+            except asyncio.CancelledError:
+                pass
+        
+        # Cancel main sync task
+>>>>>>> d85deb6ccc16c078d2880175346e52a6fc973983
         if self.sync_task:
             self.sync_task.cancel()
             try:
@@ -166,19 +261,47 @@ class BackgroundSyncService:
         logger.info(f"🔄 Total syncs: {self.sync_stats['total_syncs']}")
         logger.info(f"✅ Successful syncs: {self.sync_stats['successful_syncs']}")
         logger.info(f"❌ Failed syncs: {self.sync_stats['failed_syncs']}")
+<<<<<<< HEAD
+=======
+        
+        # Calculate uptime
+        if self.sync_stats['start_time']:
+            uptime = datetime.utcnow() - self.sync_stats['start_time']
+            self.sync_stats['uptime_seconds'] = uptime.total_seconds()
+        
+        logger.info("✅ Enhanced background sync service stopped")
+        logger.info(f"📊 Service uptime: {self.sync_stats['uptime_seconds']:.0f} seconds")
+        logger.info(f"🔄 Total syncs: {self.sync_stats['total_syncs']}")
+        logger.info(f"✅ Successful syncs: {self.sync_stats['successful_syncs']}")
+        logger.info(f"❌ Failed syncs: {self.sync_stats['failed_syncs']}")
+>>>>>>> d85deb6ccc16c078d2880175346e52a6fc973983
     
     async def _sync_loop(self):
         """Enhanced main sync loop with better error handling, recovery, and proper delays"""
         logger.info("🔄 Starting sync loop...")
 
+<<<<<<< HEAD
+=======
+        """Enhanced main sync loop with better error handling, recovery, and proper delays"""
+        logger.info("🔄 Starting sync loop...")
+
+>>>>>>> d85deb6ccc16c078d2880175346e52a6fc973983
         while self.is_running:
             try:
                 # Use asyncio.sleep(0) to yield control to other tasks
                 await asyncio.sleep(0)
 
+<<<<<<< HEAD
                 # Skip sync if paused for user requests
                 if self.paused_for_requests:
                     logger.debug("⏸️ Sync paused for user requests, checking again in 10 seconds")
+=======
+
+                # Skip sync if paused for user requests
+                if self.paused_for_requests:
+                    logger.debug("⏸️ Sync paused for user requests, checking again in 10 seconds")
+                    logger.debug("⏸️ Sync paused for user requests, checking again in 10 seconds")
+>>>>>>> d85deb6ccc16c078d2880175346e52a6fc973983
                     await asyncio.sleep(10)  # Check again in 10 seconds
                     continue
 
@@ -218,8 +341,18 @@ class BackgroundSyncService:
                 # Add a small delay after sync completion before checking again
                 await asyncio.sleep(5)
 
+<<<<<<< HEAD
             except asyncio.CancelledError:
                 logger.info("🛑 Sync loop cancelled")
+=======
+
+                # Add a small delay after sync completion before checking again
+                await asyncio.sleep(5)
+
+            except asyncio.CancelledError:
+                logger.info("🛑 Sync loop cancelled")
+                logger.info("🛑 Sync loop cancelled")
+>>>>>>> d85deb6ccc16c078d2880175346e52a6fc973983
                 break
             except Exception as e:
                 logger.error(f"❌ Critical error in sync loop: {e}")
@@ -227,6 +360,14 @@ class BackgroundSyncService:
                 self.sync_stats['last_error'] = str(e)
                 self.sync_stats['last_error_time'] = datetime.utcnow()
                 # Wait before retrying
+<<<<<<< HEAD
+=======
+                logger.error(f"❌ Critical error in sync loop: {e}")
+                self.consecutive_failures += 1
+                self.sync_stats['last_error'] = str(e)
+                self.sync_stats['last_error_time'] = datetime.utcnow()
+                # Wait before retrying
+>>>>>>> d85deb6ccc16c078d2880175346e52a6fc973983
                 await asyncio.sleep(60)
     
     async def _health_monitor_loop(self):
@@ -271,10 +412,56 @@ class BackgroundSyncService:
                 logger.error(f"❌ Error in health monitoring: {e}")
                 await asyncio.sleep(30)  # Wait before retrying
     
+<<<<<<< HEAD
+=======
+    async def _health_monitor_loop(self):
+        """Monitor service health and log status periodically"""
+        logger.info("🏥 Starting health monitoring...")
+        
+        while self.is_running:
+            try:
+                await asyncio.sleep(self.config.health_check_interval)
+                
+                # Update uptime
+                if self.sync_stats['start_time']:
+                    uptime = datetime.utcnow() - self.sync_stats['start_time']
+                    self.sync_stats['uptime_seconds'] = uptime.total_seconds()
+                
+                # Update health status
+                if self.consecutive_failures >= self.config.max_consecutive_failures:
+                    self.sync_stats['health_status'] = 'degraded'
+                elif self.consecutive_failures > 0:
+                    self.sync_stats['health_status'] = 'warning'
+                else:
+                    self.sync_stats['health_status'] = 'healthy'
+                
+                # Log health status
+                success_rate = 0
+                if self.sync_stats['total_syncs'] > 0:
+                    success_rate = (self.sync_stats['successful_syncs'] / self.sync_stats['total_syncs']) * 100
+                
+                logger.info("🏥 Health Check - "                f"Status: {self.sync_stats['health_status']} | "
+                f"Uptime: {self.sync_stats['uptime_seconds']:.0f}s | "
+                f"Total: {self.sync_stats['total_syncs']} | "
+                f"Success: {self.sync_stats['successful_syncs']} | "
+                f"Failed: {self.sync_stats['failed_syncs']} | "
+                f"Success Rate: {success_rate:.1f}%")
+                
+                self.last_health_check = datetime.utcnow()
+                
+            except asyncio.CancelledError:
+                logger.info("🏥 Health monitoring cancelled")
+                break
+            except Exception as e:
+                logger.error(f"❌ Error in health monitoring: {e}")
+                await asyncio.sleep(30)  # Wait before retrying
+    
+>>>>>>> d85deb6ccc16c078d2880175346e52a6fc973983
     async def _perform_sync(self):
         """Enhanced sync operation using comprehensive sync approach with proper delays and timeout"""
         if self.sync_in_progress:
             logger.debug("Sync already in progress, skipping this cycle")
+<<<<<<< HEAD
             return
 
         # Check if sync is enabled
@@ -287,14 +474,46 @@ class BackgroundSyncService:
             logger.debug("⏳ Google Sheets service not yet initialized, skipping sync")
             return
 
+=======
+            logger.debug("Sync already in progress, skipping this cycle")
+            return
+
+
+        # Check if sync is enabled
+        if not self.sync_enabled:
+            logger.debug("⏸️ Google Sheets sync is disabled, skipping sync")
+            logger.debug("⏸️ Google Sheets sync is disabled, skipping sync")
+            return
+
+        # Check if services are initialized
+
+        # Check if services are initialized
+        if self.sheets_service is None:
+            logger.debug("⏳ Google Sheets service not yet initialized, skipping sync")
+            logger.debug("⏳ Google Sheets service not yet initialized, skipping sync")
+            return
+
+
+>>>>>>> d85deb6ccc16c078d2880175346e52a6fc973983
         self.sync_in_progress = True
         sync_start_time = datetime.utcnow()
         sync_success = False
 
+<<<<<<< HEAD
         try:
             logger.info("🔄 Starting comprehensive background sync to Google Sheets")
             self.sync_stats['total_syncs'] += 1
 
+=======
+        sync_success = False
+
+        try:
+            logger.info("🔄 Starting comprehensive background sync to Google Sheets")
+            logger.info("🔄 Starting comprehensive background sync to Google Sheets")
+            self.sync_stats['total_syncs'] += 1
+
+
+>>>>>>> d85deb6ccc16c078d2880175346e52a6fc973983
             # Yield control to other tasks
             await asyncio.sleep(0)
 
@@ -456,6 +675,10 @@ class BackgroundSyncService:
                         self.last_sync_time = datetime.utcnow()
                         self.sync_stats['successful_syncs'] += 1
                         self.consecutive_failures = 0  # Reset consecutive failures
+<<<<<<< HEAD
+=======
+                        self.consecutive_failures = 0  # Reset consecutive failures
+>>>>>>> d85deb6ccc16c078d2880175346e52a6fc973983
                         sync_duration = (self.last_sync_time - sync_start_time).total_seconds()
                         self.sync_stats['last_sync_duration'] = sync_duration
 
@@ -507,6 +730,58 @@ class BackgroundSyncService:
                     if engagement_success:
                         logger.info("✅ Engagement logs synced to Google Sheets")
                         sync_success = True
+<<<<<<< HEAD
+=======
+
+                        # Update average duration
+                        total_duration = self.sync_stats['total_sync_duration'] + sync_duration
+                        self.sync_stats['total_sync_duration'] = total_duration
+                        self.sync_stats['average_sync_duration'] = total_duration / self.sync_stats['successful_syncs']
+
+                        sync_type = "incremental" if use_incremental else "full"
+                        logger.info(f"✅ User profiles sync successful: {len(user_profiles) if user_profiles else 0} profiles synced in {sync_duration:.2f}s ({sync_type})")
+                        sync_success = True
+                    else:
+                        logger.warning("⚠️ User profiles sync failed after all retries")
+                        self.consecutive_failures += 1
+
+                except Exception as e:
+                    logger.warning(f"⚠️ Could not sync user profiles: {e}")
+                    self.consecutive_failures += 1
+
+            # Add delay between operations
+            await asyncio.sleep(self.config.sync_delay_seconds)
+
+            # Sync quiz responses if enabled
+            if self.config.enable_quiz_responses:
+                try:
+                    use_incremental = self.last_sync_time is not None
+                    last_sync = self.last_sync_time if use_incremental else None
+                    quiz_success = await self.sheets_service.sync_quiz_responses(last_sync)
+
+                    if quiz_success:
+                        logger.info("✅ Quiz responses synced to Google Sheets")
+                        sync_success = True
+                    else:
+                        logger.warning("⚠️ Quiz responses sync failed")
+
+                except Exception as e:
+                    logger.warning(f"⚠️ Could not sync quiz responses: {e}")
+
+            # Add delay between operations
+            await asyncio.sleep(self.config.sync_delay_seconds)
+
+            # Sync engagement logs if enabled
+            if self.config.enable_engagement_logs:
+                try:
+                    use_incremental = self.last_sync_time is not None
+                    last_sync = self.last_sync_time if use_incremental else None
+                    engagement_success = await self.sheets_service.sync_engagement_logs(last_sync)
+
+                    if engagement_success:
+                        logger.info("✅ Engagement logs synced to Google Sheets")
+                        sync_success = True
+>>>>>>> d85deb6ccc16c078d2880175346e52a6fc973983
                     else:
                         logger.warning("⚠️ Engagement logs sync failed")
 
@@ -543,7 +818,54 @@ class BackgroundSyncService:
             logger.error(f"❌ Error during individual sync: {e}")
             self.consecutive_failures += 1
             self.sync_stats['last_error'] = str(e)
+<<<<<<< HEAD
             self.sync_stats['last_error_time'] = datetime.utcnow()
+=======
+            self.sync_stats['last_error_time'] = datetime.now(datetime.timezone.utc)
+
+        return sync_success
+    
+    async def _export_with_retry(self, user_profiles: list) -> bool:
+        """Export user profiles with enhanced retry logic and exponential backoff"""
+        for attempt in range(self.config.max_retries):
+            try:
+                logger.info(f"📤 Export attempt {attempt + 1}/{self.config.max_retries}")
+                success = await self.sheets_service.export_user_profiles_to_sheet(user_profiles)
+                
+                if success:
+                    logger.info(f"✅ Export successful on attempt {attempt + 1}")
+                    return True
+
+            except Exception as e:
+                logger.warning(f"⚠️ Export attempt {attempt + 1} failed: {e}")
+
+            # Add delay between operations
+            await asyncio.sleep(self.config.sync_delay_seconds)
+
+            # Sync course progress if enabled
+            if self.config.enable_course_progress:
+                try:
+                    use_incremental = self.last_sync_time is not None
+                    last_sync = self.last_sync_time if use_incremental else None
+                    progress_success = await self.sheets_service.sync_course_progress(last_sync)
+
+                    if progress_success:
+                        logger.info("✅ Course progress synced to Google Sheets")
+                        sync_success = True
+                    else:
+                        logger.warning("⚠️ Course progress sync failed")
+
+                except Exception as e:
+                    logger.warning(f"⚠️ Could not sync course progress: {e}")
+
+            # If no operations were attempted, consider it successful
+            if (not self.config.enable_course_stats and not self.config.enable_user_profiles and
+                not self.config.enable_quiz_responses and not self.config.enable_engagement_logs and
+                not self.config.enable_course_progress):
+                sync_success = True
+                logger.info("ℹ️ No sync operations enabled, skipping")
+
+>>>>>>> d85deb6ccc16c078d2880175346e52a6fc973983
 
         return sync_success
     
@@ -651,6 +973,19 @@ class BackgroundSyncService:
             uptime = datetime.utcnow() - self.sync_stats['start_time']
             uptime_seconds = uptime.total_seconds()
         
+<<<<<<< HEAD
+=======
+        """Get comprehensive sync status and statistics"""
+        success_rate = 0
+        if self.sync_stats['total_syncs'] > 0:
+            success_rate = (self.sync_stats['successful_syncs'] / self.sync_stats['total_syncs']) * 100
+        
+        uptime_seconds = 0
+        if self.sync_stats['start_time']:
+            uptime = datetime.utcnow() - self.sync_stats['start_time']
+            uptime_seconds = uptime.total_seconds()
+        
+>>>>>>> d85deb6ccc16c078d2880175346e52a6fc973983
         return {
             'is_running': self.is_running,
             'sync_in_progress': self.sync_in_progress,
@@ -687,7 +1022,6 @@ class BackgroundSyncService:
                 'last_health_check': self.last_health_check.isoformat() if self.last_health_check else None
             }
         }
-    
     def disable_sync(self):
         """Disable Google Sheets sync (useful when Google Sheets API is having issues)"""
         self.sync_enabled = False
@@ -716,6 +1050,10 @@ class BackgroundSyncService:
             return 0
         
         next_sync_time = self.last_sync_time + timedelta(seconds=self.config.interval_seconds)
+<<<<<<< HEAD
+=======
+        next_sync_time = self.last_sync_time + timedelta(seconds=self.config.interval_seconds)
+>>>>>>> d85deb6ccc16c078d2880175346e52a6fc973983
         now = datetime.utcnow()
         
         if next_sync_time > now:

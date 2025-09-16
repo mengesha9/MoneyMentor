@@ -455,7 +455,7 @@ MoneyMentor Team
     async def log_engagement(self, engagement_data: Dict[str, Any]) -> bool:
         """
         Log engagement data to Google Sheets EngagementLogs tab
-        
+         
         Args:
             engagement_data: Dictionary containing:
                 - user_id: str
@@ -484,7 +484,7 @@ MoneyMentor Team
                 str(engagement_data.get('session_duration', 0)),
                 str(engagement_data.get('quizzes_attempted', 0)),
                 'TRUE' if engagement_data.get('pretest_completed', False) else 'FALSE',
-                engagement_data.get('last_activity', datetime.utcnow().isoformat()),
+                engagement_data.get('last_activity', datetime.now(datetime.timezone.utc).isoformat()),
                 str(engagement_data.get('confidence_rating', ''))
             ]
             
