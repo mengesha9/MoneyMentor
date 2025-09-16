@@ -1,5 +1,6 @@
 from typing import Dict, Any, List, Optional
 import logging
+import asyncio
 from datetime import datetime, timedelta
 from app.core.database import get_supabase
 
@@ -33,15 +34,21 @@ class CourseStatisticsService:
         """
         try:
             # Get comprehensive quiz responses for the user
-            quiz_responses = self.supabase.table('quiz_responses').select(
-                'quiz_id, topic, correct, timestamp, score, course_id, quiz_type, created_at, page_index'
-            ).eq('user_id', user_id).execute()
+            quiz_responses = await asyncio.to_thread(
+                lambda: self.supabase.table('quiz_responses').select(
+                    'quiz_id, topic, correct, timestamp, score, course_id, quiz_type, created_at, page_index'
+                ).eq('user_id', user_id).execute()
+            )
             
             # Get user course sessions data for progress tracking
-            user_course_sessions = self.supabase.table('user_course_sessions').select('*').eq('user_id', user_id).execute()
+            user_course_sessions = await asyncio.to_thread(
+                lambda: self.supabase.table('user_course_sessions').select('*').eq('user_id', user_id).execute()
+            )
             
             # Get course information for proper naming
-            courses_result = self.supabase.table('courses').select('id, title, topic').execute()
+            courses_result = await asyncio.to_thread(
+                lambda: self.supabase.table('courses').select('id, title, topic').execute()
+            )
             course_mapping = {course['id']: course['title'] for course in courses_result.data} if courses_result.data else {}
             
             # Create separate rows for each course session instead of aggregating
@@ -207,7 +214,9 @@ class CourseStatisticsService:
                 'updated_at': datetime.utcnow().isoformat()
             }
             
-            result = self.supabase.table('user_profiles').update(update_data).eq('user_id', user_id).execute()
+            result = await asyncio.to_thread(
+                lambda: self.supabase.table('user_profiles').update(update_data).eq('user_id', user_id).execute()
+            )
             
             if result.data:
                 logger.info(f"Updated course statistics for user {user_id}: {len(course_stats)} courses")
@@ -229,7 +238,9 @@ class CourseStatisticsService:
         """
         try:
             # Get all user profiles
-            result = self.supabase.table('user_profiles').select('user_id').execute()
+            result = await asyncio.to_thread(
+                lambda: self.supabase.table('user_profiles').select('user_id').execute()
+            )
             
             if not result.data:
                 return {'success': False, 'message': 'No users found', 'updated': 0}

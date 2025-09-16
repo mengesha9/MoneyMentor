@@ -4,6 +4,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+import asyncio
 import logging
 from app.core.config import settings
 from app.core.database import get_supabase
@@ -26,9 +27,19 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against its hash"""
     return pwd_context.verify(plain_password, hashed_password)
 
+async def verify_password_async(plain_password: str, hashed_password: str) -> bool:
+    """Async version of password verification to prevent blocking"""
+    # Move CPU-intensive bcrypt verification to thread pool
+    return await asyncio.to_thread(pwd_context.verify, plain_password, hashed_password)
+
 def get_password_hash(password: str) -> str:
     """Hash a password"""
     return pwd_context.hash(password)
+
+async def get_password_hash_async(password: str) -> str:
+    """Async version of password hashing to prevent blocking"""
+    # Move CPU-intensive bcrypt hashing to thread pool
+    return await asyncio.to_thread(pwd_context.hash, password)
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """Create a JWT access token"""
@@ -71,17 +82,23 @@ def create_refresh_token(user_id: str) -> str:
             detail="Failed to create refresh token"
         )
 
-def verify_refresh_token(refresh_token: str) -> Optional[dict]:
-    """Verify a refresh token and return user info"""
+async def verify_refresh_token(refresh_token: str) -> Optional[dict]:
+    """Verify a refresh token and return user info - optimized for performance"""
     supabase = get_supabase()
     try:
         # Get all refresh tokens (we need to check all since we don't know the user_id)
-        result = supabase.table('refresh_tokens').select('*').execute()
+        result = await asyncio.to_thread(
+            lambda: supabase.table('refresh_tokens').select('*').execute()
+        )
         
         for token_record in result.data:
             try:
                 # Check if token matches and is valid
-                if pwd_context.verify(refresh_token, token_record['token_hash']):
+                token_matches = await asyncio.to_thread(
+                    pwd_context.verify, refresh_token, token_record['token_hash']
+                )
+                
+                if token_matches:
                     # Check if revoked
                     if token_record['is_revoked']:
                         continue
@@ -109,7 +126,10 @@ def verify_refresh_token(refresh_token: str) -> Optional[dict]:
                     
                     if expires_datetime > now:
                         # Get user info
-                        user_result = supabase.table('users').select('*').eq('id', token_record['user_id']).single().execute()
+                        user_result = await asyncio.to_thread(
+                            lambda: supabase.table('users').select('*').eq('id', token_record['user_id']).single().execute()
+                        )
+                        
                         if user_result.data and user_result.data.get('is_active', True):
                             return {
                                 'user_id': token_record['user_id'],
@@ -124,35 +144,48 @@ def verify_refresh_token(refresh_token: str) -> Optional[dict]:
         logger.error(f"Error verifying refresh token: {e}")
         return None
 
-def revoke_refresh_token(refresh_token: str) -> bool:
-    """Revoke a refresh token - optimized for speed"""
+async def revoke_refresh_token(refresh_token: str) -> bool:
+    """Revoke a refresh token - optimized for performance and speed"""
     supabase = get_supabase()
     try:
         # OPTIMIZATION: Hash the token and try to find it directly
         # This is much faster than fetching all tokens
-        token_hash = pwd_context.hash(refresh_token)
+        token_hash = await asyncio.to_thread(pwd_context.hash, refresh_token)
         
         # Try to find the token by hash (if we stored it)
         # If not found, fall back to the old method but with timeout
         try:
-            result = supabase.table('refresh_tokens').select('*').eq('token_hash', token_hash).execute()
+            result = await asyncio.to_thread(
+                lambda: supabase.table('refresh_tokens').select('*').eq('token_hash', token_hash).execute()
+            )
             if result.data:
                 # Found the token, revoke it
-                supabase.table('refresh_tokens').update({
-                    'is_revoked': True
-                }).eq('token_hash', token_hash).execute()
+                await asyncio.to_thread(
+                    lambda: supabase.table('refresh_tokens').update({
+                        'is_revoked': True
+                    }).eq('token_hash', token_hash).execute()
+                )
                 return True
         except Exception:
             pass
         
         # Fallback: try to find by verification (but with limit to avoid hanging)
         try:
-            result = supabase.table('refresh_tokens').select('*').limit(100).execute()
+            result = await asyncio.to_thread(
+                lambda: supabase.table('refresh_tokens').select('*').limit(100).execute()
+            )
+            
             for token_record in result.data:
-                if pwd_context.verify(refresh_token, token_record['token_hash']):
-                    supabase.table('refresh_tokens').update({
-                        'is_revoked': True
-                    }).eq('id', token_record['id']).execute()
+                token_matches = await asyncio.to_thread(
+                    pwd_context.verify, refresh_token, token_record['token_hash']
+                )
+                
+                if token_matches:
+                    await asyncio.to_thread(
+                        lambda: supabase.table('refresh_tokens').update({
+                            'is_revoked': True
+                        }).eq('id', token_record['id']).execute()
+                    )
                     return True
         except Exception:
             pass
@@ -162,13 +195,15 @@ def revoke_refresh_token(refresh_token: str) -> bool:
         logger.error(f"Error revoking refresh token: {e}")
         return False
 
-def revoke_all_user_tokens(user_id: str) -> bool:
-    """Revoke all refresh tokens for a user"""
+async def revoke_all_user_tokens(user_id: str) -> bool:
+    """Revoke all refresh tokens for a user - optimized for performance"""
     supabase = get_supabase()
     try:
-        supabase.table('refresh_tokens').update({
-            'is_revoked': True
-        }).eq('user_id', user_id).execute()
+        await asyncio.to_thread(
+            lambda: supabase.table('refresh_tokens').update({
+                'is_revoked': True
+            }).eq('user_id', user_id).execute()
+        )
         return True
     except Exception as e:
         logger.error(f"Error revoking user tokens: {e}")
@@ -186,7 +221,7 @@ def verify_token(token: str) -> Optional[dict]:
         return None
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
-    """Get current user from JWT token"""
+    """Get current user from JWT token - optimized for performance"""
     token = credentials.credentials
     payload = verify_token(token)
     
@@ -205,10 +240,13 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    # Get user from database
+    # Get user from database using async to prevent blocking
     supabase = get_supabase()
     try:
-        result = supabase.table('users').select('*').eq('id', user_id).single().execute()
+        result = await asyncio.to_thread(
+            lambda: supabase.table('users').select('*').eq('id', user_id).single().execute()
+        )
+        
         if not result.data:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -226,6 +264,8 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         
         return user
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error fetching user: {e}")
         raise HTTPException(
@@ -244,15 +284,24 @@ async def get_current_active_user(current_user: dict = Depends(get_current_user)
     return current_user
 
 async def authenticate_user(email: str, password: str) -> Optional[dict]:
-    """Authenticate a user with email and password"""
+    """Authenticate a user with email and password - optimized for performance"""
     supabase = get_supabase()
     try:
-        result = supabase.table('users').select('*').eq('email', email).single().execute()
+        # Move database query to thread pool to prevent blocking
+        result = await asyncio.to_thread(
+            lambda: supabase.table('users').select('*').eq('email', email).single().execute()
+        )
+        
         if not result.data:
+            # Still run password verification to prevent timing attacks
+            await verify_password_async("dummy", "$2b$12$dummy.hash.to.prevent.timing.attacks")
             return None
         
         user = result.data
-        if not verify_password(password, user['password_hash']):
+        
+        # Use async password verification to prevent blocking
+        password_valid = await verify_password_async(password, user['password_hash'])
+        if not password_valid:
             return None
         
         return user
@@ -262,27 +311,31 @@ async def authenticate_user(email: str, password: str) -> Optional[dict]:
         return None
 
 async def get_user_by_email(email: str) -> Optional[dict]:
-    """Get user by email"""
+    """Get user by email - optimized for performance"""
     supabase = get_supabase()
     try:
-        result = supabase.table('users').select('*').eq('email', email).single().execute()
+        result = await asyncio.to_thread(
+            lambda: supabase.table('users').select('*').eq('email', email).single().execute()
+        )
         return result.data if result.data else None
     except Exception as e:
         logger.error(f"Error fetching user by email: {e}")
         return None
 
 async def get_user_by_id(user_id: str) -> Optional[dict]:
-    """Get user by ID"""
+    """Get user by ID - optimized for performance"""
     supabase = get_supabase()
     try:
-        result = supabase.table('users').select('*').eq('id', user_id).single().execute()
+        result = await asyncio.to_thread(
+            lambda: supabase.table('users').select('*').eq('id', user_id).single().execute()
+        )
         return result.data if result.data else None
     except Exception as e:
         logger.error(f"Error fetching user by ID: {e}")
         return None
 
 async def create_user(email: str, password: str, first_name: str, last_name: str) -> Optional[dict]:
-    """Create a new user"""
+    """Create a new user - optimized for performance"""
     supabase = get_supabase()
     try:
         # Check if user already exists
@@ -290,8 +343,8 @@ async def create_user(email: str, password: str, first_name: str, last_name: str
         if existing_user:
             return None
         
-        # Hash password
-        hashed_password = get_password_hash(password)
+        # Hash password asynchronously to prevent blocking
+        hashed_password = await get_password_hash_async(password)
         
         # Create user
         user_data = {
@@ -303,7 +356,10 @@ async def create_user(email: str, password: str, first_name: str, last_name: str
             'is_verified': False
         }
         
-        result = supabase.table('users').insert(user_data).execute()
+        result = await asyncio.to_thread(
+            lambda: supabase.table('users').insert(user_data).execute()
+        )
+        
         if result.data:
             return result.data[0]
         
@@ -325,7 +381,9 @@ async def update_user(user_id: str, update_data: dict) -> Optional[dict]:
         # Add updated_at timestamp
         update_data['updated_at'] = datetime.utcnow().isoformat()
         
-        result = supabase.table('users').update(update_data).eq('id', user_id).execute()
+        result = await asyncio.to_thread(
+            lambda: supabase.table('users').update(update_data).eq('id', user_id).execute()
+        )
         if result.data:
             return result.data[0]
         
@@ -336,36 +394,41 @@ async def update_user(user_id: str, update_data: dict) -> Optional[dict]:
         return None
 
 async def delete_user(user_id: str) -> bool:
-    """Delete a user account"""
+    """Delete a user account - optimized for performance"""
     supabase = get_supabase()
     try:
-        result = supabase.table('users').delete().eq('id', user_id).execute()
+        result = await asyncio.to_thread(
+            lambda: supabase.table('users').delete().eq('id', user_id).execute()
+        )
         return bool(result.data)
     except Exception as e:
         logger.error(f"Error deleting user: {e}")
         return False
 
 async def change_user_password(user_id: str, current_password: str, new_password: str) -> bool:
-    """Change user password"""
+    """Change user password - optimized for performance"""
     try:
         # Get current user
         user = await get_user_by_id(user_id)
         if not user:
             return False
         
-        # Verify current password
-        if not verify_password(current_password, user['password_hash']):
+        # Verify current password asynchronously
+        password_valid = await verify_password_async(current_password, user['password_hash'])
+        if not password_valid:
             return False
         
-        # Hash new password
-        new_password_hash = get_password_hash(new_password)
+        # Hash new password asynchronously
+        new_password_hash = await get_password_hash_async(new_password)
         
         # Update password
         supabase = get_supabase()
-        result = supabase.table('users').update({
-            'password_hash': new_password_hash,
-            'updated_at': datetime.utcnow().isoformat()
-        }).eq('id', user_id).execute()
+        result = await asyncio.to_thread(
+            lambda: supabase.table('users').update({
+                'password_hash': new_password_hash,
+                'updated_at': datetime.utcnow().isoformat()
+            }).eq('id', user_id).execute()
+        )
         
         return bool(result.data)
         

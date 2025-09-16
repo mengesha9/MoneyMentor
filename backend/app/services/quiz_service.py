@@ -4,6 +4,7 @@ import json
 import random
 from datetime import datetime
 import logging
+import asyncio
 
 from langchain_openai import ChatOpenAI
 from langchain.prompts import PromptTemplate
@@ -109,7 +110,9 @@ class QuizService:
         """Check if diagnostic pre-test should be triggered"""
         try:
             # Check if user has completed diagnostic
-            result = self.supabase.table('quiz_attempts').select('*').eq('user_id', user_id).eq('quiz_type', 'diagnostic').execute()
+            result = await asyncio.to_thread(
+                lambda: self.supabase.table('quiz_attempts').select('*').eq('user_id', user_id).eq('quiz_type', 'diagnostic').execute()
+            )
             return len(result.data) == 0
         except Exception as e:
             logger.error(f"Failed to check diagnostic status: {e}")
@@ -260,7 +263,9 @@ class QuizService:
             }
             
             # Store quiz in Supabase
-            result = self.supabase.table('quizzes').insert(quiz_data).execute()
+            result = await asyncio.to_thread(
+                lambda: self.supabase.table('quizzes').insert(quiz_data).execute()
+            )
             
             return quiz_data
             
@@ -272,7 +277,9 @@ class QuizService:
         """Log quiz responses and update progress"""
         try:
             # Get quiz data
-            quiz = self.supabase.table('quizzes').select('*').eq('quiz_id', quiz_id).execute()
+            quiz = await asyncio.to_thread(
+                lambda: self.supabase.table('quizzes').select('*').eq('quiz_id', quiz_id).execute()
+            )
             if not quiz.data:
                 raise ValueError(f"Quiz {quiz_id} not found")
             
@@ -291,7 +298,9 @@ class QuizService:
                 "status": "completed"
             }
             
-            result = self.supabase.table('quizzes').update(update_data).eq('quiz_id', quiz_id).execute()
+            result = await asyncio.to_thread(
+                lambda: self.supabase.table('quizzes').update(update_data).eq('quiz_id', quiz_id).execute()
+            )
             
             # Update user progress
             await self._update_user_progress(quiz_data['user_id'], quiz_data['type'], score, analysis)
@@ -306,7 +315,9 @@ class QuizService:
         """Get comprehensive list of topics from content"""
         try:
             # Query Supabase for content topics
-            result = self.supabase.table('content_topics').select('topic').execute()
+            result = await asyncio.to_thread(
+                lambda: self.supabase.table('content_topics').select('topic').execute()
+            )
             return [row['topic'] for row in result.data]
         except Exception as e:
             logger.error(f"Failed to get topics: {e}")
@@ -335,7 +346,9 @@ class QuizService:
                 "timestamp": datetime.utcnow().isoformat()
             }
             
-            self.supabase.table('quiz_attempts').insert(attempt_data).execute()
+            await asyncio.to_thread(
+                lambda: self.supabase.table('quiz_attempts').insert(attempt_data).execute()
+            )
             
             # Log to Google Sheets
             try:
@@ -383,7 +396,9 @@ class QuizService:
         """Get user's quiz progress"""
         try:
             # Get all quiz attempts
-            result = self.supabase.table('quiz_attempts').select('*').eq('user_id', user_id).execute()
+            result = await asyncio.to_thread(
+                lambda: self.supabase.table('quiz_attempts').select('*').eq('user_id', user_id).execute()
+            )
             
             # Calculate statistics
             total_attempts = len(result.data)
@@ -452,7 +467,9 @@ class QuizService:
         """Update user progress based on quiz results"""
         try:
             # Get current progress
-            result = self.supabase.table('user_progress').select('*').eq('user_id', user_id).execute()
+            result = await asyncio.to_thread(
+                lambda: self.supabase.table('user_progress').select('*').eq('user_id', user_id).execute()
+            )
             current_progress = result.data[0] if result.data else {}
             
             # Update progress
@@ -467,7 +484,9 @@ class QuizService:
             }
             
             # Store in Supabase
-            self.supabase.table('user_progress').upsert(progress_data).execute()
+            await asyncio.to_thread(
+                lambda: self.supabase.table('user_progress').upsert(progress_data).execute()
+            )
             
             return True
             

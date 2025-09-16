@@ -6,6 +6,7 @@ from app.core.auth import get_user_by_id, update_user, delete_user, change_user_
 from app.models.schemas import UserProfileResponse, UserProfileUpdate
 from app.services.triggered_sync_service import triggered_sync_service
 import asyncio
+from fastapi import BackgroundTasks
 
 logger = logging.getLogger(__name__)
 
@@ -15,29 +16,31 @@ class UserService:
     def __init__(self):
         self.supabase = get_supabase()
     
-    async def get_user_profile(self, user_id: str) -> Optional[UserProfileResponse]:
+    async def get_user_profile(self, user_id: str, background_tasks: Optional[BackgroundTasks] = None) -> Optional[UserProfileResponse]:
         """Get user profile with statistics"""
         try:
-            result = self.supabase.table('user_profiles').select('*').eq('user_id', user_id).single().execute()
+            result = await asyncio.to_thread(
+                lambda: self.supabase.table('user_profiles').select('*').eq('user_id', user_id).single().execute()
+            )
             
             if result.data:
                 return UserProfileResponse(**result.data)
             
             # If no profile exists, create one
             logger.info(f"Creating profile for user {user_id}")
-            return await self.create_user_profile(user_id)
+            return await self.create_user_profile(user_id, background_tasks)
             
         except Exception as e:
             logger.error(f"Error getting user profile: {e}")
             # Try to create profile even if query failed
             try:
                 logger.info(f"Attempting to create profile for user {user_id} after error")
-                return await self.create_user_profile(user_id)
+                return await self.create_user_profile(user_id, background_tasks)
             except Exception as create_error:
                 logger.error(f"Failed to create profile for user {user_id}: {create_error}")
                 return None
     
-    async def create_user_profile(self, user_id: str) -> Optional[UserProfileResponse]:
+    async def create_user_profile(self, user_id: str, background_tasks: Optional[BackgroundTasks] = None) -> Optional[UserProfileResponse]:
         """Create a new user profile"""
         try:
             profile_data = {
@@ -50,12 +53,19 @@ class UserService:
                 'streak_start_date': date.today().isoformat()
             }
             
-            result = self.supabase.table('user_profiles').insert(profile_data).execute()
+            result = await asyncio.to_thread(
+                lambda: self.supabase.table('user_profiles').insert(profile_data).execute()
+            )
             
             if result.data:
-                # Trigger sync to Google Sheets (non-blocking)
-                triggered_sync_service.trigger_sync(f"user_profile_created_{user_id}")
-                logger.info(f"User profile created for {user_id} - sync triggered")
+                # Trigger sync to Google Sheets asynchronously in background
+                if background_tasks:
+                    background_tasks.add_task(triggered_sync_service.trigger_sync_background, f"user_profile_created_{user_id}")
+                    logger.info(f"User profile created for {user_id} - background sync scheduled")
+                else:
+                    # Fallback to synchronous call if no background tasks provided
+                    triggered_sync_service.trigger_sync(f"user_profile_created_{user_id}")
+                    logger.info(f"User profile created for {user_id} - sync triggered synchronously")
                 return UserProfileResponse(**result.data[0])
             
             return None
@@ -64,7 +74,7 @@ class UserService:
             logger.error(f"Error creating user profile: {e}")
             return None
     
-    async def update_user_profile(self, user_id: str, profile_data: UserProfileUpdate) -> Optional[UserProfileResponse]:
+    async def update_user_profile(self, user_id: str, profile_data: UserProfileUpdate, background_tasks: Optional[BackgroundTasks] = None) -> Optional[UserProfileResponse]:
         """Update user profile statistics"""
         try:
             # Convert Pydantic model to dict, excluding None values
@@ -76,12 +86,19 @@ class UserService:
             # Add updated_at timestamp
             update_data['updated_at'] = datetime.utcnow().isoformat()
             
-            result = self.supabase.table('user_profiles').update(update_data).eq('user_id', user_id).execute()
+            result = await asyncio.to_thread(
+                lambda: self.supabase.table('user_profiles').update(update_data).eq('user_id', user_id).execute()
+            )
             
             if result.data:
-                # Trigger sync to Google Sheets (non-blocking)
-                triggered_sync_service.trigger_sync(f"user_profile_updated_{user_id}")
-                logger.debug(f"User profile updated for {user_id} - sync triggered")
+                # Trigger sync to Google Sheets asynchronously in background
+                if background_tasks:
+                    background_tasks.add_task(triggered_sync_service.trigger_sync_background, f"user_profile_updated_{user_id}")
+                    logger.debug(f"User profile updated for {user_id} - background sync scheduled")
+                else:
+                    # Fallback to synchronous call if no background tasks provided
+                    triggered_sync_service.trigger_sync(f"user_profile_updated_{user_id}")
+                    logger.debug(f"User profile updated for {user_id} - sync triggered synchronously")
                 return UserProfileResponse(**result.data[0])
             
             return None
@@ -141,7 +158,9 @@ class UserService:
                 return {}
             
             # Get additional statistics from user_sessions and centralized quiz_responses
-            chat_result = self.supabase.table('user_sessions').select('chat_history').eq('user_id', str(user_id)).execute()
+            chat_result = await asyncio.to_thread(
+                lambda: self.supabase.table('user_sessions').select('chat_history').eq('user_id', str(user_id)).execute()
+            )
             
             # Count total chat messages from user_sessions
             total_chat_messages = 0
@@ -150,7 +169,9 @@ class UserService:
                 total_chat_messages += len(chat_history)
             
             # Get quiz statistics from centralized quiz_responses table
-            quiz_responses = self.supabase.table('quiz_responses').select('correct, quiz_type').eq('user_id', str(user_id)).execute()
+            quiz_responses = await asyncio.to_thread(
+                lambda: self.supabase.table('quiz_responses').select('correct, quiz_type').eq('user_id', str(user_id)).execute()
+            )
             total_quiz_responses = len(quiz_responses.data) if quiz_responses.data else 0
             
             # Calculate accuracy from quiz responses
@@ -186,10 +207,14 @@ class UserService:
             start_date = end_date - timedelta(days=days)
             
             # Get chat activity from user_sessions
-            chat_result = self.supabase.table('user_sessions').select('chat_history, created_at, updated_at').eq('user_id', str(user_id)).gte('created_at', start_date.isoformat()).execute()
+            chat_result = await asyncio.to_thread(
+                lambda: self.supabase.table('user_sessions').select('chat_history, created_at, updated_at').eq('user_id', str(user_id)).gte('created_at', start_date.isoformat()).execute()
+            )
             
             # Get quiz activity
-            quiz_result = self.supabase.table('quiz_responses').select('created_at, correct').eq('user_id', str(user_id)).gte('created_at', start_date.isoformat()).execute()
+            quiz_result = await asyncio.to_thread(
+                lambda: self.supabase.table('quiz_responses').select('created_at, correct').eq('user_id', str(user_id)).gte('created_at', start_date.isoformat()).execute()
+            )
             
             # Process activity by day
             activity_by_day = {}
@@ -258,15 +283,29 @@ class UserService:
         """Get leaderboard data for top users"""
         try:
             # Get users with highest day streaks
-            result = self.supabase.table('user_profiles').select(
-                'user_id, day_streak, days_active, total_chats, quizzes_taken'
-            ).order('day_streak', desc=True).limit(limit).execute()
+            result = await asyncio.to_thread(
+                lambda: self.supabase.table('user_profiles').select(
+                    'user_id, day_streak, days_active, total_chats, quizzes_taken'
+                ).order('day_streak', desc=True).limit(limit).execute()
+            )
+            
+            if not result.data:
+                return []
+            
+            # Get all user IDs for bulk query (FIXING N+1 PROBLEM)
+            user_ids = [profile['user_id'] for profile in result.data]
+            
+            # Single bulk query instead of individual queries per user
+            users_result = await asyncio.to_thread(
+                lambda: self.supabase.table('users').select('id, first_name, last_name').in_('id', user_ids).execute()
+            )
+            
+            # Create lookup dictionary for fast access
+            users_dict = {user['id']: user for user in users_result.data} if users_result.data else {}
             
             leaderboard = []
             for i, profile in enumerate(result.data):
-                # Get user info (without sensitive data)
-                user_result = self.supabase.table('users').select('first_name, last_name').eq('id', profile['user_id']).single().execute()
-                user_info = user_result.data if user_result.data else {}
+                user_info = users_dict.get(profile['user_id'], {})
                 
                 leaderboard.append({
                     'rank': i + 1,
