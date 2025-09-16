@@ -45,9 +45,13 @@ class CourseStatisticsSyncService:
             
             # Get all users or specific user
             if user_id:
-                users_result = self.supabase.table('users').select('id, first_name, last_name, email').eq('id', user_id).execute()
+                users_result = await asyncio.to_thread(
+                    lambda: self.supabase.table('users').select('id, first_name, last_name, email').eq('id', user_id).execute()
+                )
             else:
-                users_result = self.supabase.table('users').select('id, first_name, last_name, email').execute()
+                users_result = await asyncio.to_thread(
+                    lambda: self.supabase.table('users').select('id, first_name, last_name, email').execute()
+                )
             
             if not users_result.data:
                 logger.warning("No users found for course statistics sync")
@@ -71,43 +75,56 @@ class CourseStatisticsSyncService:
             all_course_data = []
             all_course_data.append(headers)  # Add headers as first row
             
-            for user in users_result.data:
-                user_id = user['id']
-                first_name = user.get('first_name', 'Unknown')
-                last_name = user.get('last_name', 'User')
-                email = user.get('email', '')
+            # Process users in batches to prevent blocking
+            batch_size = 5  # Process 5 users at a time
+            total_users = len(users_result.data)
+            
+            for i in range(0, total_users, batch_size):
+                batch = users_result.data[i:i + batch_size]
+                logger.info(f"Processing batch {i//batch_size + 1}/{(total_users + batch_size - 1)//batch_size}: users {i+1}-{min(i+batch_size, total_users)}")
                 
-                logger.info(f"Processing course statistics for user: {first_name} {last_name} ({email})")
-                
-                # Get course statistics for this user
-                course_stats = await self.course_stats_service.calculate_user_course_statistics(user_id)
-                
-                if course_stats:
-                    for course_stat in course_stats:
+                for user in batch:
+                    user_id = user['id']
+                    first_name = user.get('first_name', 'Unknown')
+                    last_name = user.get('last_name', 'User')
+                    email = user.get('email', '')
+                    
+                    logger.info(f"Processing course statistics for user: {first_name} {last_name} ({email})")
+                    
+                    # Get course statistics for this user
+                    course_stats = await self.course_stats_service.calculate_user_course_statistics(user_id)
+                    
+                    if course_stats:
+                        for course_stat in course_stats:
+                            row = [
+                                first_name,
+                                last_name,
+                                email,
+                                course_stat.get('course_name', 'Unknown'),
+                                course_stat.get('total_questions_taken', 0),
+                                course_stat.get('score', 0),
+                                course_stat.get('level', 'easy'),
+                                course_stat.get('last_activity', 'N/A')
+                            ]
+                            all_course_data.append(row)
+                    else:
+                        # Add a row showing no course data for this user
                         row = [
                             first_name,
                             last_name,
                             email,
-                            course_stat.get('course_name', 'Unknown'),
-                            course_stat.get('total_questions_taken', 0),
-                            course_stat.get('score', 0),
-                            course_stat.get('level', 'easy'),
-                            course_stat.get('last_activity', 'N/A')
+                            'No courses taken',
+                            0,
+                            0,
+                            'N/A',
+                            'N/A'
                         ]
                         all_course_data.append(row)
-                else:
-                    # Add a row showing no course data for this user
-                    row = [
-                        first_name,
-                        last_name,
-                        email,
-                        'No courses taken',
-                        0,
-                        0,
-                        'N/A',
-                        'N/A'
-                    ]
-                    all_course_data.append(row)
+                
+                # Yield control after each batch to prevent blocking the event loop
+                if i + batch_size < total_users:
+                    await asyncio.sleep(0.1)  # Small delay to yield control
+                    logger.info(f"Processed batch {i//batch_size + 1}, yielding control...")
             
             # Debug: Check the structure of our data
             logger.info(f"Generated {len(all_course_data)} rows of course statistics data")
@@ -147,18 +164,22 @@ class CourseStatisticsSyncService:
             logger.info("Clearing existing data in course_statistics tab")
             
             # Get current data to find the last row
-            result = self.sheets_service.service.spreadsheets().values().get(
-                spreadsheetId=self.sheets_service.spreadsheet_id,
-                range='course_statistics!A:A'
-            ).execute()
+            result = await asyncio.to_thread(
+                lambda: self.sheets_service.service.spreadsheets().values().get(
+                    spreadsheetId=self.sheets_service.spreadsheet_id,
+                    range='course_statistics!A:A'
+                ).execute()
+            )
             
             if result.get('values') and len(result['values']) > 1:
                 # Clear all data except headers (from row 2 onwards)
                 clear_range = f'course_statistics!A2:H{len(result["values"])}'
-                self.sheets_service.service.spreadsheets().values().clear(
-                    spreadsheetId=self.sheets_service.spreadsheet_id,
-                    range=clear_range
-                ).execute()
+                await asyncio.to_thread(
+                    lambda: self.sheets_service.service.spreadsheets().values().clear(
+                        spreadsheetId=self.sheets_service.spreadsheet_id,
+                        range=clear_range
+                    ).execute()
+                )
                 logger.info("Cleared existing data")
             
             # Write the new course statistics data
@@ -168,12 +189,14 @@ class CourseStatisticsSyncService:
                 'values': data
             }
             
-            result = self.sheets_service.service.spreadsheets().values().update(
-                spreadsheetId=self.sheets_service.spreadsheet_id,
-                range='course_statistics!A1:H' + str(len(data)),
-                valueInputOption='RAW',
-                body=body
-            ).execute()
+            result = await asyncio.to_thread(
+                lambda: self.sheets_service.service.spreadsheets().values().update(
+                    spreadsheetId=self.sheets_service.spreadsheet_id,
+                    range='course_statistics!A1:H' + str(len(data)),
+                    valueInputOption='RAW',
+                    body=body
+                ).execute()
+            )
             
             logger.info(f"Course statistics data written successfully: {result.get('updatedCells', 0)} cells updated")
             return True

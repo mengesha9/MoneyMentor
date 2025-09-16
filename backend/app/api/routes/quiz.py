@@ -925,7 +925,10 @@ async def get_session_quiz_progress(
         
         # Get micro quiz history for the specific session by filtering quiz_id pattern
         # Quiz IDs are generated as: quiz_{session_id}_{timestamp}
-        result = supabase.table('quiz_responses').select('*').like('quiz_id', f'quiz_{session_id}_%').eq('user_id', current_user["id"]).eq('quiz_type', 'micro').execute()
+        # PERFORMANCE FIX: Wrap in asyncio.to_thread for non-blocking operation
+        result = await asyncio.to_thread(
+            lambda: supabase.table('quiz_responses').select('*').like('quiz_id', f'quiz_{session_id}_%').eq('user_id', current_user["id"]).eq('quiz_type', 'micro').execute()
+        )
         
         quiz_responses = result.data if result.data else []
         

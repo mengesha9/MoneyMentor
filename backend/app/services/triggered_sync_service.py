@@ -22,6 +22,11 @@ class TriggeredSyncService:
         self.sync_task: Optional[asyncio.Task] = None
         self.enabled = get_sync_setting('enable_triggered_sync')
     
+    @property
+    def pending(self) -> bool:
+        """Backward compatibility property for pending_sync"""
+        return self.pending_sync
+    
     def trigger_sync(self, reason: str = "user_action") -> bool:
         """
         Trigger a sync to Google Sheets
@@ -65,12 +70,26 @@ class TriggeredSyncService:
         try:
             logger.info(f"🔄 Starting triggered sync - reason: {reason}")
             
-            # Use the manual sync service
-            result = await manual_sync_service.sync_user_profiles_to_sheets(force_sync=True)
+            # Check if this is a user-specific sync
+            user_id = None
+            if reason.startswith("user_profile_created_"):
+                user_id = reason.replace("user_profile_created_", "")
+            elif reason.startswith("user_profile_updated_"):
+                user_id = reason.replace("user_profile_updated_", "")
+            
+            if user_id:
+                # Use targeted sync for specific user
+                logger.info(f"🎯 Using targeted sync for user {user_id}")
+                result = await manual_sync_service.sync_specific_user_profiles_to_sheets([user_id], force_sync=True)
+            else:
+                # Use full sync for other reasons
+                logger.info(f"🔄 Using full sync - reason: {reason}")
+                result = await manual_sync_service.sync_user_profiles_to_sheets(force_sync=True)
             
             if result['success']:
                 self.last_sync_time = datetime.now()
-                logger.info(f"✅ Triggered sync completed successfully - reason: {reason}")
+                profiles_synced = result.get('profiles_synced', 0)
+                logger.info(f"✅ Triggered sync completed successfully - reason: {reason}, profiles: {profiles_synced}")
             else:
                 logger.warning(f"⚠️ Triggered sync failed - reason: {reason}, error: {result.get('message', 'Unknown error')}")
             
@@ -82,6 +101,96 @@ class TriggeredSyncService:
     
     def set_sync_cooldown(self, seconds: int):
         """Set the cooldown period between syncs"""
+        self.sync_cooldown = seconds
+        logger.info(f"⏰ Sync cooldown set to {seconds} seconds")
+    
+    def trigger_sync_background(self, reason: str = "user_action") -> None:
+        """
+        Trigger sync for use in FastAPI background tasks
+        This creates a new event loop if needed and runs the async sync
+        """
+        try:
+            # Try to get the current event loop
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # If loop is running, create a task
+                loop.create_task(self._perform_triggered_sync_safe(reason))
+            else:
+                # If no loop is running, run in new loop
+                asyncio.run(self._perform_triggered_sync_safe(reason))
+        except RuntimeError:
+            # No event loop exists, create a new one
+            asyncio.run(self._perform_triggered_sync_safe(reason))
+    
+    async def _perform_triggered_sync_safe(self, reason: str):
+        """Safe wrapper for performing sync that handles all edge cases"""
+        try:
+            if not self.enabled:
+                logger.info(f"🚫 Sync disabled - skipping sync for reason: {reason}")
+                return
+            
+            if self.is_in_cooldown():
+                logger.info(f"⏰ Sync in cooldown period - skipping sync for reason: {reason}")
+                return
+            
+            if self.pending_sync:
+                logger.info(f"⏳ Sync already pending - reason: {reason}")
+                return
+            
+            # Set pending state
+            self.pending_sync = True
+            logger.info(f"🔄 Starting background sync - reason: {reason}")
+            
+            # Check if this is a user-specific sync
+            user_id = None
+            if reason.startswith("user_profile_created_"):
+                user_id = reason.replace("user_profile_created_", "")
+            elif reason.startswith("user_profile_updated_"):
+                user_id = reason.replace("user_profile_updated_", "")
+            
+            if user_id:
+                # Use FULL sync even for specific user to preserve existing data
+                # This ensures all users remain in the sheet when new ones register
+                logger.info(f"� Using full sync to preserve existing users (triggered by user {user_id})")
+                result = await manual_sync_service.sync_user_profiles_to_sheets(force_sync=True)
+            else:
+                # Use full sync for other reasons
+                logger.info(f"🌍 Using full sync for reason: {reason}")
+                result = await manual_sync_service.sync_user_profiles_to_sheets()
+            
+            if result.get('success'):
+                logger.info(f"✅ Background sync completed successfully - {result.get('message', 'No details')}")
+                self.last_sync_time = datetime.now()
+            else:
+                logger.error(f"❌ Background sync failed - {result.get('error', 'Unknown error')}")
+            
+        except Exception as e:
+            logger.error(f"❌ Background sync exception: {e}")
+            import traceback
+            traceback.print_exc()
+        finally:
+            # Always clear pending state
+            self.pending_sync = False
+    
+    def is_in_cooldown(self) -> bool:
+        """Check if sync is in cooldown period"""
+        if not self.last_sync_time:
+            return False
+        
+        time_since_last = (datetime.now() - self.last_sync_time).total_seconds()
+        return time_since_last < self.sync_cooldown
+    
+    def get_cooldown_remaining(self) -> int:
+        """Get remaining cooldown time in seconds"""
+        if not self.last_sync_time:
+            return 0
+        
+        time_since_last = (datetime.now() - self.last_sync_time).total_seconds()
+        remaining = self.sync_cooldown - time_since_last
+        return max(0, int(remaining))
+    
+    def set_sync_cooldown(self, seconds: int):
+        """Set sync cooldown period"""
         self.sync_cooldown = seconds
         logger.info(f"⏰ Sync cooldown set to {seconds} seconds")
     
