@@ -15,7 +15,8 @@ from app.core.auth import (
     update_user, change_user_password, get_user_by_email
 )
 from app.services.user_service import UserService
-from app.services.background_sync_service import background_sync_service
+# DISABLED SYNC SERVICES - Background sync service commented out
+# from app.services.background_sync_service import background_sync_service
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -480,63 +481,64 @@ async def get_user_profile(
             detail="Failed to get user profile"
         )
 
-@router.get("/sync-status")
-async def get_sync_status():
-    """Get Google Sheets background sync status (for monitoring)"""
-    try:
-        status = background_sync_service.get_sync_status()
-        return {
-            "status": "success",
-            "data": status
-        }
-    except Exception as e:
-        logger.error(f"Error getting sync status: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get sync status"
-        )
+# DISABLED SYNC SERVICES - All sync endpoints commented out
+# @router.get("/sync-status")
+# async def get_sync_status():
+#     """Get Google Sheets background sync status (for monitoring)"""
+#     try:
+#         status = background_sync_service.get_sync_status()
+#         return {
+#             "status": "success",
+#             "data": status
+#         }
+#     except Exception as e:
+#         logger.error(f"Error getting sync status: {e}")
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail="Failed to get sync status"
+#         )
 
-@router.post("/force-sync")
-async def force_sync_now():
-    """Force an immediate Google Sheets sync (for testing)"""
-    try:
-        success = await background_sync_service.force_sync_now()
-        if success:
-            return {"message": "Sync completed successfully"}
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Sync failed"
-            )
-    except Exception as e:
-        logger.error(f"Error forcing sync: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to force sync"
-        )
+# @router.post("/force-sync")
+# async def force_sync_now():
+#     """Force an immediate Google Sheets sync (for testing)"""
+#     try:
+#         success = await background_sync_service.force_sync_now()
+#         if success:
+#             return {"message": "Sync completed successfully"}
+#         else:
+#             raise HTTPException(
+#                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#                 detail="Sync failed"
+#             )
+#     except Exception as e:
+#         logger.error(f"Error forcing sync: {e}")
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail="Failed to force sync"
+#         )
 
-@router.post("/disable-sync")
-async def disable_sync():
-    """Disable Google Sheets sync (useful when Google Sheets API is having issues)"""
-    try:
-        background_sync_service.disable_sync()
-        return {"message": "Google Sheets sync disabled"}
-    except Exception as e:
-        logger.error(f"Error disabling sync: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to disable sync"
-        )
+# @router.post("/disable-sync")
+# async def disable_sync():
+#     """Disable Google Sheets sync (useful when Google Sheets API is having issues)"""
+#     try:
+#         background_sync_service.disable_sync()
+#         return {"message": "Google Sheets sync disabled"}
+#     except Exception as e:
+#         logger.error(f"Error disabling sync: {e}")
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail="Failed to disable sync"
+#         )
 
-@router.post("/enable-sync")
-async def enable_sync():
-    """Enable Google Sheets sync"""
-    try:
-        background_sync_service.enable_sync()
-        return {"message": "Google Sheets sync enabled"}
-    except Exception as e:
-        logger.error(f"Error enabling sync: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to enable sync"
-        ) 
+# @router.post("/enable-sync")
+# async def enable_sync():
+#     """Enable Google Sheets sync"""
+#     try:
+#         background_sync_service.enable_sync()
+#         return {"message": "Google Sheets sync enabled"}
+#     except Exception as e:
+#         logger.error(f"Error enabling sync: {e}")
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail="Failed to enable sync"
+#         ) 

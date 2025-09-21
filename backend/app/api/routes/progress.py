@@ -98,104 +98,105 @@ async def get_leaderboard():
         logger.error(f"Leaderboard retrieval failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to get leaderboard")
 
-@router.post("/export-all-users")
-async def export_all_user_profiles():
-    """Export all user profiles to Google Sheets UserProfiles tab"""
-    try:
-        from app.services.google_sheets_service import GoogleSheetsService
-        
-        sheets_service = GoogleSheetsService()
-        
-        # Get all user profiles for export
-        user_profiles = await sheets_service.get_all_user_profiles_for_export()
-        
-        if not user_profiles:
-            return {
-                "success": False,
-                "message": "No user profiles found to export"
-            }
-        
-        # Export to Google Sheets
-        success = await sheets_service.export_user_profiles_to_sheet(user_profiles)
-        
-        if success:
-            return {
-                "success": True,
-                "message": f"Successfully exported {len(user_profiles)} user profiles to Google Sheets",
-                "exported_count": len(user_profiles),
-                "sheet_tab": "UserProfiles"
-            }
-        else:
-            return {
-                "success": False,
-                "message": "Failed to export user profiles to Google Sheets"
-            }
-        
-    except Exception as e:
-        logger.error(f"User profiles export failed: {e}")
-        raise HTTPException(status_code=500, detail="Failed to export user profiles")
+# DISABLED SYNC SERVICES - Export endpoints commented out
+# @router.post("/export-all-users")
+# async def export_all_user_profiles():
+#     """Export all user profiles to Google Sheets UserProfiles tab"""
+#     try:
+#         from app.services.google_sheets_service import GoogleSheetsService
+#         
+#         sheets_service = GoogleSheetsService()
+#         
+#         # Get all user profiles for export
+#         user_profiles = await sheets_service.get_all_user_profiles_for_export()
+#         
+#         if not user_profiles:
+#             return {
+#                 "success": False,
+#                 "message": "No user profiles found to export"
+#             }
+#         
+#         # Export to Google Sheets
+#         success = await sheets_service.export_user_profiles_to_sheet(user_profiles)
+#         
+#         if success:
+#             return {
+#                 "success": True,
+#                 "message": f"Successfully exported {len(user_profiles)} user profiles to Google Sheets",
+#                 "exported_count": len(user_profiles),
+#                 "sheet_tab": "UserProfiles"
+#             }
+#         else:
+#             return {
+#                 "success": False,
+#                 "message": "Failed to export user profiles to Google Sheets"
+#             }
+#         
+#     except Exception as e:
+#         logger.error(f"User profiles export failed: {e}")
+#         raise HTTPException(status_code=500, detail="Failed to export user profiles")
 
-@router.post("/export/{user_id}")
-async def export_user_data(user_id: str):
-    """Export specific user data for analysis (Google Sheets integration)"""
-    try:
-        from app.services.google_sheets_service import GoogleSheetsService
-        
-        sheets_service = GoogleSheetsService()
-        
-        # Get user profile data
-        supabase = get_supabase()
-        
-        # Get user profile
-        profile_result = supabase.table('user_profiles').select(
-            'user_id, total_chats, quizzes_taken, day_streak, days_active'
-        ).eq('user_id', user_id).single().execute()
-        
-        if not profile_result.data:
-            raise HTTPException(status_code=404, detail="User profile not found")
-        
-        profile = profile_result.data
-        
-        # Get user information
-        user_result = supabase.table('users').select(
-            'first_name, last_name, email'
-        ).eq('id', user_id).single().execute()
-        
-        if not user_result.data:
-            raise HTTPException(status_code=404, detail="User not found")
-        
-        user_info = user_result.data
-        
-        # Prepare user profile for export
-        user_profile = {
-            'user_id': user_id,
-            'first_name': user_info.get('first_name', ''),
-            'last_name': user_info.get('last_name', ''),
-            'email': user_info.get('email', ''),
-            'total_chats': profile.get('total_chats', 0),
-            'quizzes_taken': profile.get('quizzes_taken', 0),
-            'day_streak': profile.get('day_streak', 0),
-            'days_active': profile.get('days_active', 0)
-        }
-        
-        # Export to Google Sheets
-        success = await sheets_service.export_user_profiles_to_sheet([user_profile])
-        
-        if success:
-            return {
-                "success": True,
-                "message": f"Successfully exported user profile for {user_info.get('first_name', '')} {user_info.get('last_name', '')}",
-                "user_profile": user_profile,
-                "sheet_tab": "UserProfiles"
-            }
-        else:
-            return {
-                "success": False,
-                "message": "Failed to export user profile to Google Sheets"
-            }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"User data export failed: {e}")
-        raise HTTPException(status_code=500, detail="Failed to export user data") 
+# @router.post("/export/{user_id}")
+# async def export_user_data(user_id: str):
+#     """Export specific user data for analysis (Google Sheets integration)"""
+#     try:
+#         from app.services.google_sheets_service import GoogleSheetsService
+#         
+#         sheets_service = GoogleSheetsService()
+#         
+#         # Get user profile data
+#         supabase = get_supabase()
+#         
+#         # Get user profile
+#         profile_result = supabase.table('user_profiles').select(
+#             'user_id, total_chats, quizzes_taken, day_streak, days_active'
+#         ).eq('user_id', user_id).single().execute()
+#         
+#         if not profile_result.data:
+#             raise HTTPException(status_code=404, detail="User profile not found")
+#         
+#         profile = profile_result.data
+#         
+#         # Get user information
+#         user_result = supabase.table('users').select(
+#             'first_name, last_name, email'
+#         ).eq('id', user_id).single().execute()
+#         
+#         if not user_result.data:
+#             raise HTTPException(status_code=404, detail="User not found")
+#         
+#         user_info = user_result.data
+#         
+#         # Prepare user profile for export
+#         user_profile = {
+#             'user_id': user_id,
+#             'first_name': user_info.get('first_name', ''),
+#             'last_name': user_info.get('last_name', ''),
+#             'email': user_info.get('email', ''),
+#             'total_chats': profile.get('total_chats', 0),
+#             'quizzes_taken': profile.get('quizzes_taken', 0),
+#             'day_streak': profile.get('day_streak', 0),
+#             'days_active': profile.get('days_active', 0)
+#         }
+#         
+#         # Export to Google Sheets
+#         success = await sheets_service.export_user_profiles_to_sheet([user_profile])
+#         
+#         if success:
+#             return {
+#                 "success": True,
+#                 "message": f"Successfully exported user profile for {user_info.get('first_name', '')} {user_info.get('last_name', '')}",
+#                 "user_profile": user_profile,
+#                 "sheet_tab": "UserProfiles"
+#             }
+#         else:
+#             return {
+#                 "success": False,
+#                 "message": "Failed to export user profile to Google Sheets"
+#             }
+#         
+#     except HTTPException:
+#         raise
+#     except Exception as e:
+#         logger.error(f"User data export failed: {e}")
+#         raise HTTPException(status_code=500, detail="Failed to export user data") 

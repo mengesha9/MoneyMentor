@@ -7,7 +7,7 @@ Easy configuration for Google Sheets sync intervals and behavior
 SYNC_INTERVALS = {
     'triggered_sync_cooldown': 30,   # Reduced from 300 to 30 seconds (30s between triggered syncs)
     'manual_sync_cooldown': 120,     # 2 minutes between manual syncs
-    'background_sync_interval': 1800, # 30 minutes for background sync (if enabled)
+    'background_sync_interval': 120, # 2 minutes for background sync (changed from 1800)
 }
 
 # Sync behavior settings

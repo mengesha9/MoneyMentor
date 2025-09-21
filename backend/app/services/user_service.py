@@ -4,7 +4,8 @@ import logging
 from app.core.database import get_supabase
 from app.core.auth import get_user_by_id, update_user, delete_user, change_user_password
 from app.models.schemas import UserProfileResponse, UserProfileUpdate
-from app.services.triggered_sync_service import triggered_sync_service
+# DISABLED SYNC SERVICES - Triggered sync service commented out
+# from app.services.triggered_sync_service import triggered_sync_service
 import asyncio
 from fastapi import BackgroundTasks
 
@@ -58,14 +59,16 @@ class UserService:
             )
             
             if result.data:
+                # DISABLED SYNC SERVICES - Sync triggers commented out
                 # Trigger sync to Google Sheets asynchronously in background
-                if background_tasks:
-                    background_tasks.add_task(triggered_sync_service.trigger_sync_background, f"user_profile_created_{user_id}")
-                    logger.info(f"User profile created for {user_id} - background sync scheduled")
-                else:
-                    # Fallback to synchronous call if no background tasks provided
-                    triggered_sync_service.trigger_sync(f"user_profile_created_{user_id}")
-                    logger.info(f"User profile created for {user_id} - sync triggered synchronously")
+                # if background_tasks:
+                #     background_tasks.add_task(triggered_sync_service.trigger_sync_background, f"user_profile_created_{user_id}")
+                #     logger.info(f"User profile created for {user_id} - background sync scheduled")
+                # else:
+                #     # Fallback to synchronous call if no background tasks provided
+                #     triggered_sync_service.trigger_sync(f"user_profile_created_{user_id}")
+                #     logger.info(f"User profile created for {user_id} - sync triggered synchronously")
+                logger.info(f"User profile created for {user_id} - sync disabled")
                 return UserProfileResponse(**result.data[0])
             
             return None
@@ -91,14 +94,16 @@ class UserService:
             )
             
             if result.data:
+                # DISABLED SYNC SERVICES - Sync triggers commented out
                 # Trigger sync to Google Sheets asynchronously in background
-                if background_tasks:
-                    background_tasks.add_task(triggered_sync_service.trigger_sync_background, f"user_profile_updated_{user_id}")
-                    logger.debug(f"User profile updated for {user_id} - background sync scheduled")
-                else:
-                    # Fallback to synchronous call if no background tasks provided
-                    triggered_sync_service.trigger_sync(f"user_profile_updated_{user_id}")
-                    logger.debug(f"User profile updated for {user_id} - sync triggered synchronously")
+                # if background_tasks:
+                #     background_tasks.add_task(triggered_sync_service.trigger_sync_background, f"user_profile_updated_{user_id}")
+                #     logger.debug(f"User profile updated for {user_id} - background sync scheduled")
+                # else:
+                #     # Fallback to synchronous call if no background tasks provided
+                #     triggered_sync_service.trigger_sync(f"user_profile_updated_{user_id}")
+                #     logger.debug(f"User profile updated for {user_id} - sync triggered synchronously")
+                logger.debug(f"User profile updated for {user_id} - sync disabled")
                 return UserProfileResponse(**result.data[0])
             
             return None
