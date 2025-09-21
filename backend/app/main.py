@@ -7,10 +7,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from app.core.config import settings
-from app.api.routes import chat, quiz, calculation, progress, content, course, streaming_chat, user, session, sync, admin
-from app.services.background_sync_service import background_sync_service
-from app.services.database_listener_service import database_listener_service
-from app.services.session_cleanup_service import session_cleanup_service
+from app.api.routes import chat, quiz, calculation, progress, content, course, streaming_chat, user, session, admin
+# DISABLED SYNC SERVICES - Commented out to disable all sync functionality
+# from app.api.routes import sync
+# from app.services.background_sync_service import background_sync_service
+# from app.services.database_listener_service import database_listener_service
+# from app.services.session_cleanup_service import session_cleanup_service
 
 # Configure logging
 logging.basicConfig(
@@ -24,55 +26,57 @@ async def lifespan(app: FastAPI):
     """Handle application startup and shutdown events"""
     logger.info("🚀 Starting MoneyMentor API...")
 
+    # DISABLED SYNC SERVICES - All background services commented out
     # Startup: Initialize background services
-    try:
-        logger.info("🔄 Starting background sync service...")
-        await background_sync_service.start_background_sync()
-        logger.info("✅ Background sync service started successfully")
-    except Exception as e:
-        logger.error(f"❌ Failed to start background sync service: {e}")
+    # try:
+    #     logger.info("🔄 Starting background sync service...")
+    #     await background_sync_service.start_background_sync()
+    #     logger.info("✅ Background sync service started successfully")
+    # except Exception as e:
+    #     logger.error(f"❌ Failed to start background sync service: {e}")
 
-    try:
-        logger.info("🔄 Starting database listener service...")
-        await database_listener_service.start_listener()
-        logger.info("✅ Database listener service started successfully")
-    except Exception as e:
-        logger.error(f"❌ Failed to start database listener service: {e}")
+    # try:
+    #     logger.info("🔄 Starting database listener service...")
+    #     await database_listener_service.start_listener()
+    #     logger.info("✅ Database listener service started successfully")
+    # except Exception as e:
+    #     logger.error(f"❌ Failed to start database listener service: {e}")
 
-    try:
-        logger.info("🔄 Starting session cleanup service...")
-        await session_cleanup_service.start_cleanup_service()
-        logger.info("✅ Session cleanup service started successfully")
-    except Exception as e:
-        logger.error(f"❌ Failed to start session cleanup service: {e}")
+    # try:
+    #     logger.info("🔄 Starting session cleanup service...")
+    #     await session_cleanup_service.start_cleanup_service()
+    #     logger.info("✅ Session cleanup service started successfully")
+    # except Exception as e:
+    #     logger.error(f"❌ Failed to start session cleanup service: {e}")
 
-    logger.info("🎉 All background services started successfully")
+    logger.info("🎉 API started successfully (sync services disabled)")
 
     yield
 
+    # DISABLED SYNC SERVICES - All shutdown cleanup commented out
     # Shutdown: Clean up background services
     logger.info("🛑 Shutting down MoneyMentor API...")
 
-    try:
-        logger.info("🛑 Stopping background sync service...")
-        await background_sync_service.stop_background_sync()
-        logger.info("✅ Background sync service stopped")
-    except Exception as e:
-        logger.error(f"❌ Error stopping background sync service: {e}")
+    # try:
+    #     logger.info("🛑 Stopping background sync service...")
+    #     await background_sync_service.stop_background_sync()
+    #     logger.info("✅ Background sync service stopped")
+    # except Exception as e:
+    #     logger.error(f"❌ Error stopping background sync service: {e}")
 
-    try:
-        logger.info("🛑 Stopping database listener service...")
-        await database_listener_service.stop_listener()
-        logger.info("✅ Database listener service stopped")
-    except Exception as e:
-        logger.error(f"❌ Error stopping database listener service: {e}")
+    # try:
+    #     logger.info("🛑 Stopping database listener service...")
+    #     await database_listener_service.stop_listener()
+    #     logger.info("✅ Database listener service stopped")
+    # except Exception as e:
+    #     logger.error(f"❌ Error stopping database listener service: {e}")
 
-    try:
-        logger.info("🛑 Stopping session cleanup service...")
-        await session_cleanup_service.stop_cleanup_service()
-        logger.info("✅ Session cleanup service stopped")
-    except Exception as e:
-        logger.error(f"❌ Error stopping session cleanup service: {e}")
+    # try:
+    #     logger.info("🛑 Stopping session cleanup service...")
+    #     await session_cleanup_service.stop_cleanup_service()
+    #     logger.info("✅ Session cleanup service stopped")
+    # except Exception as e:
+    #     logger.error(f"❌ Error stopping session cleanup service: {e}")
 
     logger.info("👋 MoneyMentor API shutdown complete")
 
@@ -99,9 +103,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# DISABLED SYNC SERVICES - Request priority middleware commented out
 # Request priority middleware (pauses background sync during user requests)
-from app.middleware.request_priority import RequestPriorityMiddleware
-app.add_middleware(RequestPriorityMiddleware)
+# from app.middleware.request_priority import RequestPriorityMiddleware
+# app.add_middleware(RequestPriorityMiddleware)
 
 # Custom exception handler for validation errors
 @app.exception_handler(RequestValidationError)
@@ -236,7 +241,8 @@ app.include_router(course.router, prefix="/api/course", tags=["course"])
 app.include_router(streaming_chat.router, prefix="/api/streaming", tags=["streaming"])
 app.include_router(user.router, prefix="/api/user", tags=["user"])
 app.include_router(session.router, prefix="/api/session", tags=["session"])
-app.include_router(sync.router, prefix="/api/sync", tags=["sync"])
+# DISABLED SYNC SERVICES - Sync router commented out
+# app.include_router(sync.router, prefix="/api/sync", tags=["sync"])
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 
 # Background services are now triggered on-demand after quiz submissions
@@ -263,36 +269,37 @@ async def health_check():
         "message": "API is running and ready"
     }
 
-@app.get("/sync/status")
-async def get_sync_status():
-    """Get background sync service status"""
-    return background_sync_service.get_sync_status()
+# DISABLED SYNC SERVICES - All sync endpoints commented out
+# @app.get("/sync/status")
+# async def get_sync_status():
+#     """Get background sync service status"""
+#     return background_sync_service.get_sync_status()
 
-@app.get("/sync/supabase-listener")
-async def get_supabase_listener_status():
-    """Get Supabase real-time listener service status"""
-    from app.services.supabase_listener_service import supabase_listener_service
-    return supabase_listener_service.get_status()
+# @app.get("/sync/supabase-listener")
+# async def get_supabase_listener_status():
+#     """Get Supabase real-time listener service status"""
+#     from app.services.supabase_listener_service import supabase_listener_service
+#     return supabase_listener_service.get_status()
 
-@app.post("/sync/force")
-async def force_sync():
-    """Force an immediate sync to Google Sheets"""
-    success = await background_sync_service.force_sync_now()
-    return {
-        "success": success,
-        "message": "Sync completed" if success else "Sync failed"
-    }
+# @app.post("/sync/force")
+# async def force_sync():
+#     """Force an immediate sync to Google Sheets"""
+#     success = await background_sync_service.force_sync_now()
+#     return {
+#         "success": success,
+#         "message": "Sync completed" if success else "Sync failed"
+#     }
 
-@app.get("/session/cleanup/status")
-async def get_session_cleanup_status():
-    """Get session cleanup service status"""
-    return session_cleanup_service.get_status()
+# @app.get("/session/cleanup/status")
+# async def get_session_cleanup_status():
+#     """Get session cleanup service status"""
+#     return session_cleanup_service.get_status()
 
-@app.post("/session/cleanup/force")
-async def force_session_cleanup():
-    """Force an immediate session cleanup"""
-    result = await session_cleanup_service.force_cleanup_now()
-    return result
+# @app.post("/session/cleanup/force")
+# async def force_session_cleanup():
+#     """Force an immediate session cleanup"""
+#     result = await session_cleanup_service.force_cleanup_now()
+#     return result
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,5 +1,6 @@
 import asyncio
-from app.services.background_sync_service import background_sync_service
+# DISABLED SYNC SERVICES - Background sync and Google Sheets services commented out
+# from app.services.background_sync_service import background_sync_service
 from fastapi import APIRouter, HTTPException, Depends, Request
 from typing import Dict, Any, List
 import logging
@@ -8,7 +9,8 @@ import uuid
 from app.models.schemas import QuizRequest, QuizResponse, QuizAttempt, QuizAttemptResponse, QuizSubmission, QuizSubmissionBatch, CourseRecommendation
 from app.agents.crew import money_mentor_crew
 from app.services.quiz_service import QuizService
-from app.services.google_sheets_service import GoogleSheetsService
+# DISABLED SYNC SERVICES - Google Sheets service commented out
+# from app.services.google_sheets_service import GoogleSheetsService
 from app.services.content_service import ContentService
 from app.services.course_service import CourseService
 from app.services.ai_course_service import AICourseService
@@ -28,8 +30,9 @@ router = APIRouter()
 # Note: Exception handlers should be added to the main FastAPI app, not to APIRouter
 # The enhanced error handling is now in the function-level try-catch blocks
 
+# DISABLED SYNC SERVICES - Google Sheets service instantiation commented out
 # Initialize Google Sheets service
-google_sheets_service = GoogleSheetsService()
+# google_sheets_service = GoogleSheetsService()
 
 # Initialize LLM for course generation
 course_llm = ChatOpenAI(
@@ -290,34 +293,36 @@ async def submit_quiz(
         # 3. Update user_progress table with aggregated stats
         await _update_user_progress_from_batch(current_user["id"], quiz_batch.quiz_type, topic_stats)
         
+        # DISABLED SYNC SERVICES - Google Sheets logging commented out
         # 4. Log to Google Sheets (for client access)
-        if google_sheets_service.service:
-            try:
-                # Prepare data for Google Sheets (new schema)
-                sheets_data = []
-                for response in quiz_batch.responses:
-                    sheets_data.append({
-                        'user_id': current_user["id"],  # Use user_id from token
-                        'quiz_id': response["quiz_id"],
-                        'topic_tag': response["topic"],  # Updated to topic_tag
-                        'selected_option': response["selected_option"],  # Updated to selected_option
-                        'correct': response["correct"],
-                        'session_id': quiz_batch.session_id or current_user["id"]  # Use session_id if provided
-                    })
-                
-                # Log to Google Sheets
-                if len(sheets_data) == 1:
-                    google_sheets_service.log_quiz_response(sheets_data[0])
-                else:
-                    google_sheets_service.log_multiple_responses(sheets_data)
-                
-                logger.info(f"Quiz responses logged to Google Sheets for user {quiz_batch.user_id}")
-                
-            except Exception as e:
-                logger.error(f"Failed to log to Google Sheets: {e}")
-                # Don't fail the entire request if Google Sheets fails
-        else:
-            logger.warning("Google Sheets service not available - quiz responses not logged to client sheet")
+        # if google_sheets_service.service:
+        #     try:
+        #         # Prepare data for Google Sheets (new schema)
+        #         sheets_data = []
+        #         for response in quiz_batch.responses:
+        #             sheets_data.append({
+        #                 'user_id': current_user["id"],  # Use user_id from token
+        #                 'quiz_id': response["quiz_id"],
+        #                 'topic_tag': response["topic"],  # Updated to topic_tag
+        #                 'selected_option': response["selected_option"],  # Updated to selected_option
+        #                 'correct': response["correct"],
+        #                 'session_id': quiz_batch.session_id or current_user["id"]  # Use session_id if provided
+        #             })
+        #         
+        #         # Log to Google Sheets
+        #         if len(sheets_data) == 1:
+        #             google_sheets_service.log_quiz_response(sheets_data[0])
+        #         else:
+        #             google_sheets_service.log_multiple_responses(sheets_data)
+        #         
+        #         logger.info(f"Quiz responses logged to Google Sheets for user {quiz_batch.user_id}")
+        #         
+        #     except Exception as e:
+        #         logger.error(f"Failed to log to Google Sheets: {e}")
+        #         # Don't fail the entire request if Google Sheets fails
+        # else:
+        #     logger.warning("Google Sheets service not available - quiz responses not logged to client sheet")
+        logger.info(f"Quiz responses processed for user {quiz_batch.user_id} - Google Sheets logging disabled")
         
         # 5. Calculate overall results
         total_responses = len(quiz_batch.responses)
@@ -617,7 +622,8 @@ async def submit_quiz(
             "correct_responses": correct_responses,
             "overall_score": overall_score,
             "topic_breakdown": topic_stats,
-            "google_sheets_logged": google_sheets_service.service is not None,
+            # DISABLED SYNC SERVICES - Google Sheets logging status commented out
+            "google_sheets_logged": False,  # google_sheets_service.service is not None,
             "google_sheets_url": google_sheets_url,
             "recommended_course_id": recommended_course_id,
             "ai_generated_course": ai_course_data if 'ai_course_data' in locals() else None
@@ -633,15 +639,17 @@ async def submit_quiz(
         
         print("=" * 80)
         
+        # DISABLED SYNC SERVICES - Background sync trigger commented out
         # 7. Trigger background sync to Google Sheets after successful quiz submission (non-blocking)
-        try:
-            # Use the existing background sync service asynchronously
-            asyncio.create_task(background_sync_service.force_sync_now())
-            logger.info(f"Background sync triggered for user {current_user['id']} after quiz submission")
-            
-        except Exception as e:
-            logger.warning(f"Failed to trigger background sync after quiz submission: {e}")
-            # Don't fail the entire request if sync fails
+        # try:
+        #     # Use the existing background sync service asynchronously
+        #     asyncio.create_task(background_sync_service.force_sync_now())
+        #     logger.info(f"Background sync triggered for user {current_user['id']} after quiz submission")
+        #     
+        # except Exception as e:
+        #     logger.warning(f"Failed to trigger background sync after quiz submission: {e}")
+        #     # Don't fail the entire request if sync fails
+        logger.info(f"Quiz submission completed for user {current_user['id']} - background sync disabled")
         
         return {
             "success": True,
