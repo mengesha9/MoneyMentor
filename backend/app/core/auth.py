@@ -288,8 +288,9 @@ async def authenticate_user(email: str, password: str) -> Optional[dict]:
     supabase = get_supabase()
     try:
         # Move database query to thread pool to prevent blocking
+        # Use .maybe_single() instead of .single() to handle cases with no results
         result = await asyncio.to_thread(
-            lambda: supabase.table('users').select('*').eq('email', email).single().execute()
+            lambda: supabase.table('users').select('*').eq('email', email).maybe_single().execute()
         )
         
         if not result.data:
@@ -315,7 +316,7 @@ async def get_user_by_email(email: str) -> Optional[dict]:
     supabase = get_supabase()
     try:
         result = await asyncio.to_thread(
-            lambda: supabase.table('users').select('*').eq('email', email).single().execute()
+            lambda: supabase.table('users').select('*').eq('email', email).maybe_single().execute()
         )
         return result.data if result.data else None
     except Exception as e:
@@ -327,7 +328,7 @@ async def get_user_by_id(user_id: str) -> Optional[dict]:
     supabase = get_supabase()
     try:
         result = await asyncio.to_thread(
-            lambda: supabase.table('users').select('*').eq('id', user_id).single().execute()
+            lambda: supabase.table('users').select('*').eq('id', user_id).maybe_single().execute()
         )
         return result.data if result.data else None
     except Exception as e:
