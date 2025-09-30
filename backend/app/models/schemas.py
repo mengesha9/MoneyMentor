@@ -476,9 +476,18 @@ class CourseCompleteResponse(BaseModel):
 class UserCreate(BaseModel):
     """Schema for user registration"""
     email: EmailStr = Field(..., description="User email address")
-    password: str = Field(..., min_length=8, description="User password (min 8 characters)")
+    password: str = Field(..., min_length=8, max_length=72, description="User password (8-72 characters)")
     first_name: str = Field(..., min_length=1, max_length=100, description="User first name")
     last_name: str = Field(..., min_length=1, max_length=100, description="User last name")
+    
+    @field_validator('password')
+    @classmethod
+    def validate_password_length(cls, v):
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters long')
+        if len(v.encode('utf-8')) > 72:
+            raise ValueError('Password cannot be longer than 72 bytes (characters)')
+        return v
     
     class Config:
         json_schema_extra = {
@@ -579,7 +588,16 @@ class LogoutRequest(BaseModel):
 class PasswordChange(BaseModel):
     """Schema for password change"""
     current_password: str = Field(..., description="Current password")
-    new_password: str = Field(..., min_length=8, description="New password (min 8 characters)")
+    new_password: str = Field(..., min_length=8, max_length=72, description="New password (8-72 characters)")
+    
+    @field_validator('new_password')
+    @classmethod
+    def validate_password_length(cls, v):
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters long')
+        if len(v.encode('utf-8')) > 72:
+            raise ValueError('Password cannot be longer than 72 bytes (characters)')
+        return v
     
     class Config:
         json_schema_extra = {
@@ -603,7 +621,16 @@ class PasswordReset(BaseModel):
 class PasswordResetConfirm(BaseModel):
     """Schema for password reset confirmation"""
     token: str = Field(..., description="Password reset token")
-    new_password: str = Field(..., min_length=8, description="New password (min 8 characters)")
+    new_password: str = Field(..., min_length=8, max_length=72, description="New password (8-72 characters)")
+    
+    @field_validator('new_password')
+    @classmethod
+    def validate_password_length(cls, v):
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters long')
+        if len(v.encode('utf-8')) > 72:
+            raise ValueError('Password cannot be longer than 72 bytes (characters)')
+        return v
     
     class Config:
         json_schema_extra = {

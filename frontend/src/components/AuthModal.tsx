@@ -8,8 +8,6 @@ import {
   Button,
   Typography,
   Box,
-  FormControlLabel,
-  Checkbox,
   Alert,
   Link,
   CircularProgress
@@ -41,11 +39,33 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onAuthSuccess, mode: init
   const [lastName, setLastName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [keepLoggedIn, setKeepLoggedIn] = useState(true);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    
+    // Client-side validation
+    if (mode === 'register') {
+      if (!firstName.trim()) {
+        setError('First name is required');
+        return;
+      }
+      if (!lastName.trim()) {
+        setError('Last name is required');
+        return;
+      }
+    }
+    
+    // Password validation for both login and register
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters long');
+      return;
+    }
+    if (password.length > 72) {
+      setError('Password cannot be longer than 72 characters');
+      return;
+    }
+    
     setLoading(true);
     try {
       let result;
@@ -113,45 +133,48 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onAuthSuccess, mode: init
               <TextField
                 fullWidth
                 label="First Name"
-              value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
+                value={firstName}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFirstName(e.target.value)}
                 required={mode === 'register'}
                 size="small"
-            />
+              />
               <TextField
                 fullWidth
                 label="Last Name"
-              value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
+                value={lastName}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLastName(e.target.value)}
                 required={mode === 'register'}
                 size="small"
-            />
+              />
             </Box>
         )}
 
           <TextField
             fullWidth
             label="Email"
-          type="email"
-          value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          required
-            size="small"
-            sx={{ mb: 2 }}
-        />
-
-          <TextField
-            fullWidth
-            label="Password"
-          type="password"
-          value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          required
+            type="email"
+            value={email}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+            required
             size="small"
             sx={{ mb: 2 }}
           />
 
-          {/* Removed keepLoggedIn checkbox */}
+          <TextField
+            fullWidth
+            label="Password"
+            type="password"
+            value={password}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+            required
+            size="small"
+            sx={{ mb: 2 }}
+            inputProps={{
+              minLength: 8,
+              maxLength: 72
+            }}
+            helperText="Password must be 8-72 characters long"
+          />
 
           {error && (
             <Alert severity="error" sx={{ mb: 2 }}>
